@@ -26,7 +26,7 @@ function Steps({ browser, url }: { browser: string; url: string }) {
         <Shot label="کلید Developer mode" />
       </li>
       <li>
-        روی <b>Load unpacked</b> کلیک کنید و پوشه <span className="ltr">price-kompass-extension</span> (همان پوشه‌ای که فایل manifest.json داخل آن است) را انتخاب کنید.
+        روی <b>Load unpacked</b> کلیک کنید و پوشه‌ای را که از zip بیرون آوردید انتخاب کنید. داخل این پوشه باید مستقیماً فایل <span className="ltr">manifest.json</span> دیده شود (اگر پیام «Manifest file is missing» آمد، یک پوشه داخل‌تر را انتخاب کنید).
         <Shot label="دکمه Load unpacked و انتخاب پوشه" />
       </li>
       <li>

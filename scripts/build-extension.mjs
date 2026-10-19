@@ -31,6 +31,7 @@ const files = {};
 files["manifest.json"] = new TextEncoder().encode(JSON.stringify(manifest, null, 2));
 
 mkdirSync(OUT, { recursive: true });
-const zipped = zipSync({ "price-kompass-extension": files }, { level: 9 });
+// files at the zip root: Windows "Extract All" then gives a folder with manifest.json directly inside
+const zipped = zipSync(files, { level: 9 });
 writeFileSync(path.join(OUT, "price-kompass-extension.zip"), zipped);
 console.log(`[extension] v${manifest.version} packaged for ${manifest.externally_connectable.matches.join(", ")}`);
