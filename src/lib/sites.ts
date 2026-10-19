@@ -1,0 +1,35 @@
+export const SITES = ["torob", "digikala", "emalls"] as const;
+export type SiteId = (typeof SITES)[number];
+
+export const SITE_INFO: Record<SiteId, { label: string; home: string; color: string }> = {
+  torob: { label: "ترب", home: "https://torob.com", color: "#e8590c" },
+  digikala: { label: "دیجی‌کالا", home: "https://www.digikala.com", color: "#ef394e" },
+  emalls: { label: "ایمالز", home: "https://emalls.ir", color: "#1c7ed6" },
+};
+
+/** The site's own search page, for the manual fallback button. */
+export function searchUrl(site: SiteId, term: string): string {
+  const q = encodeURIComponent(term.trim());
+  switch (site) {
+    case "torob":
+      return `https://torob.com/search/?query=${q}`;
+    case "digikala":
+      return `https://www.digikala.com/search/?q=${q}`;
+    case "emalls":
+      return `https://emalls.ir/${encodeURIComponent("لیست-قیمت")}~Search~${encodeURIComponent(term.trim().replace(/\s+/g, " "))}`;
+  }
+}
+
+export function isSite(s: unknown): s is SiteId {
+  return typeof s === "string" && (SITES as readonly string[]).includes(s);
+}
+
+/** A pinned URL must belong to that site. */
+export function urlBelongsToSite(site: SiteId, url: string): boolean {
+  try {
+    const h = new URL(url).hostname.replace(/^www\./, "");
+    return site === "torob" ? h.endsWith("torob.com") : site === "digikala" ? h.endsWith("digikala.com") : h.endsWith("emalls.ir");
+  } catch {
+    return false;
+  }
+}

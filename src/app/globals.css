@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: #f5f6f8;
+  --card: #ffffff;
+  --fg: #16181d;
+  --muted: #646b78;
+  --border: #e2e5ea;
+  --accent: #0f766e;
+  --accent-fg: #ffffff;
+  --accent-soft: #e6f4f2;
+  --good: #15803d;
+  --good-soft: #e9f7ee;
+  --bad: #b42318;
+  --bad-soft: #fdecea;
+  --warn: #a15c07;
+  --warn-soft: #fdf4e3;
+  --row: #fafbfc;
+  color-scheme: light;
+}
+.dark {
+  --bg: #0f1115;
+  --card: #171a20;
+  --fg: #e8eaee;
+  --muted: #9aa1ad;
+  --border: #2a2f38;
+  --accent: #2dd4bf;
+  --accent-fg: #06201d;
+  --accent-soft: #10302c;
+  --good: #4ade80;
+  --good-soft: #10291a;
+  --bad: #f87171;
+  --bad-soft: #341616;
+  --warn: #fbbf24;
+  --warn-soft: #33270c;
+  --row: #1b1f26;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-row: var(--row);
+  --font-sans: var(--font-vazirmatn), Tahoma, sans-serif;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Latin text (model codes, URLs) stays left-to-right inside RTL lines */
+.ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+@utility card {
+  @apply rounded-xl border border-border bg-card;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
+}
+@utility btn-primary {
+  @apply btn bg-accent text-accent-fg hover:opacity-90;
+}
+@utility btn-ghost {
+  @apply btn border border-border bg-card text-fg hover:bg-row;
+}
+@utility btn-danger {
+  @apply btn border border-bad/40 bg-bad-soft text-bad hover:opacity-90;
+}
+@utility input {
+  @apply w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-fg outline-none placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/25;
+}
+@utility label {
+  @apply mb-1 block text-sm font-medium text-muted;
+}
+
+@layer components {
+  .table {
+    @apply w-full border-collapse text-sm;
+  }
+  .table th {
+    @apply border-b border-border px-3 py-2 text-start font-medium whitespace-nowrap text-muted;
+  }
+  .table td {
+    @apply border-b border-border px-3 py-2.5 align-middle;
+  }
+  .table tbody tr:hover {
+    @apply bg-row;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+}
+
+kbd {
+  @apply rounded border border-border bg-row px-1.5 py-0.5 font-sans text-xs text-muted;
+}

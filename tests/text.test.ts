@@ -1,0 +1,56 @@
+import { describe, expect, it } from "vitest";
+import { compactText, normalizeCode, normalizeText } from "@/lib/normalize";
+import { defaultSearchTerm, extractModel } from "@/lib/model";
+import { faNum, formatToman, timeAgo, toToman } from "@/lib/format";
+import { hashPassword, verifyPassword } from "@/lib/server/password";
+
+describe("normalize", () => {
+  it("folds Arabic letters, half-spaces and digits", () => {
+    expect(normalizeText("مانيتور ۲۴ اينچ كامپيوتر")).toBe(normalizeText("مانیتور 24 اینچ کامپیوتر"));
+    expect(normalizeText("می‌خواهم")).toBe("می خواهم");
+    expect(compactText("می‌خواهم")).toBe(compactText("میخواهم"));
+    expect(compactText("GDM-248CS")).toBe("gdm248cs");
+    expect(compactText("gdm 248 cs")).toBe("gdm248cs");
+  });
+  it("normalizes codes", () => {
+    expect(normalizeCode("۸۸۷۲۴")).toBe("88724");
+    expect(normalizeCode(" 88724.0 ")).toBe("88724");
+    expect(normalizeCode("A-12")).toBe("A-12");
+  });
+});
+
+describe("model extraction", () => {
+  it("finds the Latin model in a Farsi name", () => {
+    expect(extractModel("مانیتور 24 اینچ جی پلاس مدل GDM-248CS")).toBe("GDM-248CS");
+    expect(extractModel("مانیتور ۲۴ اینچ سامسونگ LS24C310EAMXUE")).toBe("LS24C310EAMXUE");
+    expect(extractModel("گوشی موبایل سامسونگ مدل Galaxy A55 5G SM-A556E/DS")).toBe("A55");
+    expect(extractModel("کابل شارژ")).toBe("");
+  });
+  it("search term falls back to the name", () => {
+    expect(defaultSearchTerm("مانیتور 24 اینچ جی پلاس مدل GDM-248CS")).toBe("GDM-248CS");
+    expect(defaultSearchTerm("کابل شارژ")).toBe("کابل شارژ");
+  });
+});
+
+describe("format", () => {
+  it("Persian digits and Toman", () => {
+    expect(faNum(12500000)).toBe("۱۲٬۵۰۰٬۰۰۰");
+    expect(formatToman(4590000)).toBe("۴٬۵۹۰٬۰۰۰ تومان");
+    expect(toToman(45900000, "IRR")).toBe(4590000);
+    expect(toToman(4590000, "TOMAN")).toBe(4590000);
+  });
+  it("relative time", () => {
+    const now = new Date("2026-10-19T12:00:00Z");
+    expect(timeAgo(new Date("2026-10-19T10:00:00Z"), now)).toBe("۲ ساعت پیش");
+    expect(timeAgo(new Date("2026-10-19T11:59:50Z"), now)).toBe("همین الان");
+  });
+});
+
+describe("password", () => {
+  it("hashes and verifies", () => {
+    const h = hashPassword("secret-123");
+    expect(verifyPassword("secret-123", h)).toBe(true);
+    expect(verifyPassword("secret-124", h)).toBe(false);
+    expect(verifyPassword("x", "garbage")).toBe(false);
+  });
+});
