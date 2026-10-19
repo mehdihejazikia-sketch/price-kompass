@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body { font-family: Vazirmatn, Tahoma, sans-serif; width: 300px; margin: 0; padding: 14px; color: #16181d; background: #fff; }
+    @media (prefers-color-scheme: dark) { body { background: #171a20; color: #e8eaee; } input { background: #0f1115; color: #e8eaee; } }
+    h1 { font-size: 15px; margin: 0 0 6px; }
+    p { font-size: 12px; color: #646b78; margin: 4px 0 10px; line-height: 1.7; }
+    .ok { color: #15803d; font-weight: bold; }
+    input { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid #ccd; border-radius: 6px; direction: ltr; }
+    button { margin-top: 8px; width: 100%; padding: 7px; border: 0; border-radius: 6px; background: #0f766e; color: #fff; cursor: pointer; }
+    pre { font-size: 11px; white-space: pre-wrap; direction: ltr; text-align: left; max-height: 220px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>قیمت‌یاب</h1>
+  <p><span class="ok">● افزونه فعال است</span> · نسخه <span id="v"></span><br />برای استعلام، از سایت قیمت‌یاب جستجو کنید. این صفحه فقط برای آزمایش است.</p>
+  <input id="term" value="GDM-248CS" aria-label="عبارت آزمایشی" />
+  <button data-site="torob">آزمایش ترب</button>
+  <button data-site="digikala">آزمایش دیجی‌کالا</button>
+  <button data-site="emalls">آزمایش ایمالز</button>
+  <pre id="out"></pre>
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

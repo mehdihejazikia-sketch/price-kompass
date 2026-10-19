@@ -1,33 +1,38 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/server/auth";
 import { getProduct } from "@/lib/server/products";
+import { lastKnown } from "@/lib/server/prices";
+import { serverSourceInfo } from "@/lib/server/sources";
+import { ProductHeader } from "@/components/ProductHeader";
+import { PriceChecker } from "@/components/PriceChecker";
+import { SearchBox } from "@/components/SearchBox";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  return { title: `کالا ${(await params).id}` };
+}
 
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const u = await requireUser();
-  const product = await getProduct(u.company_id, Number((await params).id) || 0);
+  const id = Number((await params).id) || 0;
+  const product = await getProduct(u.company_id, id);
   if (!product) notFound();
+  const last = await lastKnown(u.company_id, id);
   return (
     <div className="space-y-4">
+      <div className="max-w-xl"><SearchBox autoFocus={false} compact /></div>
       <ProductHeader product={product} admin={u.role === "admin"} />
-    </div>
-  );
-}
-
-export function ProductHeader({ product, admin }: { product: NonNullable<Awaited<ReturnType<typeof getProduct>>>; admin: boolean }) {
-  return (
-    <div className="card flex flex-wrap items-start gap-4 p-5">
-      <div className="min-w-0 flex-1">
-        <h1 className="text-xl font-bold leading-relaxed">{product.name}</h1>
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
-          <span>کد: {product.internal_code ? <span className="ltr font-medium text-fg">{product.internal_code}</span> : <span className="badge bg-warn-soft text-warn">بدون کد</span>}</span>
-          {product.dup_code && <span className="badge bg-bad-soft text-bad">کد تکراری</span>}
-          {product.inactive_at && <span className="badge bg-warn-soft text-warn">غیرفعال</span>}
-          {product.model && <span>· مدل: <span className="ltr font-medium text-fg">{product.model}</span></span>}
-          {product.search_term && <span>· عبارت جستجو: <span className="ltr font-medium text-fg">{product.search_term}</span></span>}
-        </div>
-      </div>
-      {admin && <Link href={`/products/${product.id}/edit`} className="btn-ghost">ویرایش</Link>}
+      <PriceChecker
+        key={product.id}
+        product={{
+          id: product.id,
+          name: product.name,
+          model: product.model,
+          search_term: product.search_term,
+          urls: { torob: product.url_torob, digikala: product.url_digikala, emalls: product.url_emalls },
+        }}
+        initialLast={JSON.parse(JSON.stringify(last))}
+        serverSources={serverSourceInfo()}
+      />
     </div>
   );
 }
