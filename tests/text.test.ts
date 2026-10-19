@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compactText, normalizeCode, normalizeText } from "@/lib/normalize";
+import { compactText, normalizeCode, normalizeName, normalizeText } from "@/lib/normalize";
 import { defaultSearchTerm, extractModel } from "@/lib/model";
 import { faNum, formatToman, timeAgo, toToman } from "@/lib/format";
 import { hashPassword, verifyPassword } from "@/lib/server/password";
@@ -14,8 +14,17 @@ describe("normalize", () => {
   });
   it("normalizes codes", () => {
     expect(normalizeCode("۸۸۷۲۴")).toBe("88724");
-    expect(normalizeCode(" 88724.0 ")).toBe("88724");
+    expect(normalizeCode(" 0100248400002\u200c")).toBe("0100248400002");
+    expect(normalizeCode("2282610098500074")).toBe("2282610098500074");
     expect(normalizeCode("A-12")).toBe("A-12");
+  });
+});
+
+describe("normalizeName", () => {
+  it("keeps punctuation, folds letters and spaces", () => {
+    expect(normalizeName("  باطري سيلداسيد       12V/42 AH ")).toBe("باطری سیلداسید 12v/42 ah");
+    expect(normalizeName("كيف\u200bدستي ۱۷")).toBe("کیفدستی 17");
+    expect(normalizeName("12V/7.AH")).not.toBe(normalizeName("12V/7AH"));
   });
 });
 

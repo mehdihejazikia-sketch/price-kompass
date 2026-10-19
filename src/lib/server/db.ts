@@ -37,3 +37,19 @@ export async function one<T = Record<string, unknown>>(text: string, params: unk
   const rows = await query<T>(text, params);
   return rows[0] ?? null;
 }
+
+/** Run several statements on one connection inside a transaction. */
+export async function tx<T>(fn: (q: <R = Record<string, unknown>>(text: string, params?: unknown[]) => Promise<R[]>) => Promise<T>): Promise<T> {
+  const client = await pool().connect();
+  try {
+    await client.query("BEGIN");
+    const out = await fn(async (text, params = []) => (await client.query(text, params as unknown[])).rows);
+    await client.query("COMMIT");
+    return out;
+  } catch (e) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
+}

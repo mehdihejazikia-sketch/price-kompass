@@ -40,6 +40,20 @@ npm test                    # unit + database tests (vitest)
 npm run test:e2e            # browser tests (Playwright, uses database pk_test)
 ```
 
+## Product import (accounting export)
+- Upload the accounting file as-is (`.xlsx`, `.xls`, `.csv`) on «ورود از اکسل». The header row is
+  found automatically (first row with «نام کالا» and «کد کالا»); the saved default format means
+  no column mapping step. Unknown headers → manual mapping, optionally saved as the new default.
+- Cells are read as text: codes keep leading zeros and full length (EAN up to 21 digits).
+- Identity on re-upload: unique code → same product (renames keep price history and pinned
+  links); shared code → code + normalized name; no code → normalized name.
+  Products with no code are tagged «بدون کد», shared codes «کد تکراری» (filters on «کالاها»).
+- The preview shows new / name changed / unchanged / missing / problems before saving.
+  Missing products become «غیرفعال» (hidden from search, history kept) unless «حذف» is chosen.
+- Every import is logged; the latest one can be undone.
+- «دانلود اکسل» writes the same layout (plus model, search term, last prices) and can be re-uploaded.
+- The real accounting file for tests goes in `samples/products.xlsx` (git-ignored, never committed).
+
 ## Data safety rules
 - Schema changes only via a **new** file in `migrations/` (never edit an applied one).
 - Products are soft-deleted (`deleted_at`), price history is append-only.

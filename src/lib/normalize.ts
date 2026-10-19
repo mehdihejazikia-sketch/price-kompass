@@ -34,15 +34,37 @@ export function compactText(input: unknown): string {
   return normalizeText(input).replace(/\s+/g, "");
 }
 
-/** Internal codes: Latin digits, no spaces, Excel's "88724.0" → "88724". */
+const ZERO_WIDTH = /[\u200B-\u200F\u202A-\u202E\u2060\uFEFF]/g;
+
+/**
+ * Internal codes are text (EAN barcodes up to 21 digits, leading zeros):
+ * Latin digits, zero-width characters and spaces removed. Never a number.
+ */
 export function normalizeCode(input: unknown): string {
-  let s = toLatinDigits(String(input ?? "")).trim();
-  s = s.replace(/[\s‌‏‎]+/g, "");
-  if (/^\d+\.0+$/.test(s)) s = s.replace(/\.0+$/, "");
-  return s;
+  return toLatinDigits(String(input ?? "")).replace(ZERO_WIDTH, "").replace(/\s+/g, "").trim();
 }
 
-export function searchColumns(p: { internal_code: string; name: string; brand?: string; model?: string; search_term?: string }) {
+/**
+ * Product names for matching on re-upload (the original is kept for display):
+ * ي→ی, ك→ک, Latin digits, zero-width characters removed, spaces collapsed,
+ * Latin letters lower-cased. Punctuation is kept: "12V/7AH" ≠ "12V 7AH".
+ */
+export function normalizeName(input: unknown): string {
+  return toLatinDigits(String(input ?? ""))
+    .replace(/[يى]/g, "ی")
+    .replace(/ك/g, "ک")
+    .replace(ZERO_WIDTH, "")
+    .replace(/[\s\u00A0]+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+export function searchColumns(p: { internal_code: string; name: string; brand?: string | null; model?: string | null; search_term?: string | null }) {
   const all = [p.internal_code, p.name, p.brand, p.model, p.search_term].filter(Boolean).join(" ");
-  return { search_norm: normalizeText(all), search_compact: compactText(all) };
+  return {
+    search_norm: normalizeText(all),
+    search_compact: compactText(all),
+    code_norm: normalizeCode(p.internal_code),
+    name_norm: normalizeName(p.name),
+  };
 }
