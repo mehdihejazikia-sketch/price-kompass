@@ -36,7 +36,8 @@ describe("model extraction", () => {
     expect(extractModel("کابل شارژ")).toBe("");
   });
   it("search term falls back to the name", () => {
-    expect(defaultSearchTerm("مانیتور 24 اینچ جی پلاس مدل GDM-248CS")).toBe("GDM-248CS");
+    expect(defaultSearchTerm("  موس   LOGITECH M-90 ")).toBe("موس LOGITECH M-90");
+    expect(defaultSearchTerm("كيف دستي")).toBe("کیف دستی");
     expect(defaultSearchTerm("کابل شارژ")).toBe("کابل شارژ");
   });
 });

@@ -31,3 +31,4 @@ export async function runCheck(sources: PriceSource[], product: CheckProduct, si
 }
 
 export type { CheckProduct, PriceSource, SiteResult } from "./types";
+export { evaluateResult } from "./evaluate";

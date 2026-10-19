@@ -7,6 +7,7 @@ export type CheckProduct = {
   id: number;
   name: string;
   model: string;
+  brand?: string;
   search_term: string;
   urls: Partial<Record<SiteId, string | null>>;
 };
@@ -31,7 +32,15 @@ export type SiteResult = {
   page_url?: string | null;
   pinned?: boolean;
   checked_at?: string;
+  /** "search" results page or the pinned "product" page */
+  kind?: "search" | "product";
+  /** all results the extension saw (re-checked by src/lib/match.ts) */
+  candidates?: Candidate[];
+  /** the closest result when none really matched */
+  suggestion?: { title: string; price_toman: number | null; url: string | null } | null;
 };
+
+export type Candidate = { title: string; price?: number | null; currency?: string | null; url?: string | null; in_stock?: boolean | null; seller?: string | null; seller_count?: number | null };
 
 export type CheckHandlers = {
   progress?: (site: SiteId) => void;

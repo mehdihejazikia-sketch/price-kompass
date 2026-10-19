@@ -46,7 +46,7 @@ describe("accounting format", () => {
     expect(inputs).toHaveLength(2);
     const d = diffProducts(inputs, [], providedFields(f.map));
     expect(d.entries[0].final.model).toBe("GDM-248CS");
-    expect(d.entries[0].final.search_term).toBe("GDM-248CS");
+    expect(d.entries[0].final.search_term).toBe("مانیتور 24 اینچ جی پلاس مدل GDM-248CS");
     expect(d.counts.no_code).toBe(1);
   });
 

@@ -22,8 +22,17 @@ export function extractModel(name: string): string {
   return candidates.reduce((a, b) => (b.t.length > a.t.length ? b : a)).t;
 }
 
-/** What to type into the shop search boxes. */
-export function defaultSearchTerm(name: string, model?: string): string {
-  const m = (model || extractModel(name)).trim();
-  return m || (name || "").trim();
+/**
+ * What to type into the shop search boxes: the product name itself (type +
+ * brand + model, e.g. «موس LOGITECH M-90»), cleaned. A bare model code like
+ * "M-90" is too short: shops return every product with "M90" in its name.
+ * Same cleaning as migrations/003_search_term_full_name.sql.
+ */
+export function defaultSearchTerm(name: string, _model?: string): string {
+  return (name || "")
+    .replace(/[يى]/g, "ی")
+    .replace(/ك/g, "ک")
+    .replace(/[\u200B-\u200F\uFEFF]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }

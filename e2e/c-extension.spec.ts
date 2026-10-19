@@ -57,7 +57,7 @@ test("live check for 88724 (GDM-248CS) on torob, digikala and emalls", async () 
 
   const torob = page.getByTestId("row-torob");
   await expect(torob).toContainText("GDM-248CS"); // found title, the right model (not GDM-278LN)
-  await expect(torob).toContainText("مدل مطابقت دارد");
+  await expect(torob).toContainText("کالا مطابقت دارد");
   await expect(torob).toContainText("۱۲ فروشنده");
   await expect(torob).toContainText("کمترین قیمت");
   await expect(page.getByTestId("row-digikala")).toContainText("۴۷٬۵۰۰٬۰۰۰ ریال"); // Rial shown, converted to Toman
@@ -107,6 +107,6 @@ test("without the extension: clear message, last prices and manual buttons", asy
   await page.keyboard.press("Enter");
   await expect(page.getByTestId("ext-missing")).toBeVisible();
   await expect(page.getByTestId("row-torob")).toContainText("آخرین قیمت ثبت‌شده");
-  await expect(page.getByTestId("row-digikala").getByRole("link", { name: "جستجو در دیجی‌کالا" })).toHaveAttribute("href", /digikala\.com\/search\/\?q=GDM-248CS/);
+  await expect(page.getByTestId("row-digikala").getByRole("link", { name: "جستجو در دیجی‌کالا" })).toHaveAttribute("href", /digikala\.com\/search\/\?q=.*GDM-248CS/);
   await c.close();
 });

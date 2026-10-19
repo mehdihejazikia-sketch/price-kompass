@@ -76,7 +76,7 @@ export async function checkSite(site, product) {
     if (!candidates.length) {
       return { ...base, status: "not_found", message: parsed.kind === "product" ? "قیمت در صفحه کالا پیدا نشد." : `کالایی با «${term}» در ${LABELS[site]} پیدا نشد.` };
     }
-    const best = parsed.kind === "product" ? { ...candidates[0], match: "pinned", alternatives: [] } : pickBest(candidates, product);
+    const best = parsed.kind === "product" ? { ...candidates[0], match: "pinned" } : pickBest(candidates, product);
     if (!best) return { ...base, status: "not_found", message: "نتیجه‌ای پیدا نشد." };
     const currency = best.currency === "IRR" ? "IRR" : "IRT";
     const price_toman = best.price ? (currency === "IRR" ? Math.round(best.price / 10) : best.price) : null;
@@ -93,7 +93,9 @@ export async function checkSite(site, product) {
       seller: best.seller ?? null,
       seller_count: best.seller_count ?? null,
       match: best.match,
-      alternatives: best.alternatives ?? [],
+      // all results, so the website can re-check the choice with its own matcher
+      candidates: candidates.slice(0, 12).map(({ title, price, currency, url, in_stock, seller, seller_count }) => ({ title, price, currency, url, in_stock, seller, seller_count })),
+      kind: parsed.kind,
     };
   } catch (e) {
     return { ...base, status: "error", message: `باز کردن ${LABELS[site]} ممکن نشد. (${e?.message || e})` };

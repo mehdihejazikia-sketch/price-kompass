@@ -22,6 +22,13 @@ export type StoredCheck = {
   checked_by_name?: string | null;
 };
 
+/**
+ * Only results we are sure are this product count as its price (last known,
+ * chart, lowest price, export): the model/type/brand matched, or the product
+ * page was confirmed by a user. "partial" results are shown with a warning only.
+ */
+export const CONFIRMED = "(match IS NULL OR match IN ('exact', 'pinned'))";
+
 const COLS = "c.id, c.site, c.source, c.status, c.title, c.price_toman, c.price_raw, c.currency, c.url, c.in_stock, c.seller, c.seller_count, c.match, c.message, c.checked_at";
 
 const str = (v: unknown, n: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null);
@@ -74,7 +81,7 @@ export async function lastKnown(companyId: number, productId: number) {
   return query<StoredCheck>(
     `SELECT DISTINCT ON (c.site) ${COLS}, u.display_name AS checked_by_name
        FROM price_checks c LEFT JOIN users u ON u.id = c.checked_by
-      WHERE c.company_id = $1 AND c.product_id = $2 AND c.status = 'ok'
+      WHERE c.company_id = $1 AND c.product_id = $2 AND c.status = 'ok' AND ${CONFIRMED}
       ORDER BY c.site, c.checked_at DESC`,
     [companyId, productId],
   );
@@ -84,7 +91,7 @@ export async function lastKnown(companyId: number, productId: number) {
 export async function priceHistory(companyId: number, productId: number, days = 180) {
   return query<{ site: string; price_toman: number; checked_at: string }>(
     `SELECT site, price_toman, checked_at FROM price_checks
-      WHERE company_id = $1 AND product_id = $2 AND status = 'ok' AND price_toman IS NOT NULL
+      WHERE company_id = $1 AND product_id = $2 AND status = 'ok' AND price_toman IS NOT NULL AND ${CONFIRMED}
         AND checked_at > now() - ($3 || ' days')::interval
       ORDER BY checked_at`,
     [companyId, productId, String(days)],
@@ -113,7 +120,7 @@ export async function recentProducts(companyId: number, limit = 8) {
   return query<{ product_id: number; name: string; internal_code: string; checked_at: string; min_price: number | null }>(
     `SELECT p.id AS product_id, p.name, p.internal_code, x.checked_at,
             (SELECT min(price_toman) FROM (SELECT DISTINCT ON (site) price_toman, in_stock FROM price_checks
-               WHERE product_id = p.id AND status = 'ok' ORDER BY site, checked_at DESC) l WHERE l.in_stock IS NOT FALSE) AS min_price
+               WHERE product_id = p.id AND status = 'ok' AND ${CONFIRMED} ORDER BY site, checked_at DESC) l WHERE l.in_stock IS NOT FALSE) AS min_price
        FROM (SELECT product_id, max(checked_at) AS checked_at FROM price_checks WHERE company_id = $1
               GROUP BY product_id ORDER BY max(checked_at) DESC LIMIT $2) x
        JOIN products p ON p.id = x.product_id AND p.deleted_at IS NULL

@@ -195,7 +195,8 @@ export function mergeRow(c: FileRow, old: ExistingProduct, has: Set<ProductField
   const name = nameChanged ? c.name : old.name;
   const modelWasAuto = !old.model || old.model === extractModel(old.name);
   const model = c.model || (nameChanged && modelWasAuto ? c.model_auto || old.model : old.model || c.model_auto);
-  const termWasAuto = !old.search_term || old.search_term === defaultSearchTerm(old.name, old.model);
+  // auto = derived from the name (or, before Oct 2026, the bare model code)
+  const termWasAuto = !old.search_term || old.search_term === defaultSearchTerm(old.name, old.model) || old.search_term === old.model;
   const search_term = c.search_term || (termWasAuto ? defaultSearchTerm(name, model) : old.search_term);
   return {
     internal_code: normalizeCode(old.internal_code) === c.code_norm ? old.internal_code : c.internal_code,

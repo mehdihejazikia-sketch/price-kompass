@@ -5,7 +5,7 @@ import Link from "next/link";
 import { apiFetch } from "@/lib/client";
 import { faNum, formatDateTime, formatRial, formatToman, timeAgo } from "@/lib/format";
 import { SITES, SITE_INFO, searchUrl, type SiteId } from "@/lib/sites";
-import { buildSources, runCheck, type CheckProduct, type ServerSourceInfo, type SiteResult } from "@/lib/sources";
+import { buildSources, evaluateResult, runCheck, type CheckProduct, type ServerSourceInfo, type SiteResult } from "@/lib/sources";
 import { pingExtension } from "@/lib/sources/extension";
 import type { StoredCheck } from "@/lib/server/prices";
 
@@ -13,7 +13,7 @@ type Row = { state: "idle" | "checking" | "done"; live?: SiteResult };
 type ExtState = "detecting" | "missing" | "ready";
 
 const MATCH: Record<string, [string, string]> = {
-  exact: ["مدل مطابقت دارد", "bg-good-soft text-good"],
+  exact: ["کالا مطابقت دارد", "bg-good-soft text-good"],
   pinned: ["لینک ثابت", "bg-accent-soft text-accent"],
   partial: ["مطابقت ناقص؛ بررسی کنید", "bg-warn-soft text-warn"],
   weak: ["شاید کالای دیگری باشد", "bg-bad-soft text-bad"],
@@ -56,10 +56,11 @@ export function PriceChecker({
       try {
         const unhandled = await runCheck(sources, { ...product, urls }, sites, {
           progress: (site) => setRows((r) => ({ ...r, [site]: { state: "checking" } })),
-          result: (res) => {
+          result: (raw) => {
+            const res = evaluateResult(raw, { ...product, urls });
             setRows((r) => ({ ...r, [res.site]: { state: "done", live: res } }));
             // save every result right away, so the history is kept even if the page is closed
-            apiFetch<{ saved: StoredCheck[] }>(`/api/products/${product.id}/prices`, { method: "POST", json: { results: [res] } })
+            apiFetch<{ saved: StoredCheck[] }>(`/api/products/${product.id}/prices`, { method: "POST", json: { results: [{ ...res, candidates: undefined, suggestion: undefined }] } })
               .then(({ saved }) => {
                 const ok = saved.find((s) => s.status === "ok");
                 if (ok) setLast((l) => ({ ...l, [ok.site]: ok }));
@@ -104,6 +105,19 @@ export function PriceChecker({
     return () => window.removeEventListener("keydown", onKey);
   }, [check, running, ext]);
 
+  async function pinAndRecheck(site: SiteId, url: string) {
+    await pin(site, url);
+    pendingRecheck.current = site;
+  }
+  const pendingRecheck = useRef<SiteId | null>(null);
+  useEffect(() => {
+    const site = pendingRecheck.current;
+    if (site && !running) {
+      pendingRecheck.current = null;
+      check([site]);
+    }
+  }, [urls, running, check]);
+
   async function pin(site: SiteId, url: string | null) {
     const { product: p } = await apiFetch<{ product: { url_torob: string | null; url_digikala: string | null; url_emalls: string | null } }>(
       `/api/products/${product.id}/pin`,
@@ -128,11 +142,12 @@ export function PriceChecker({
       live,
       last: l,
       price: liveOk ? live!.price_toman ?? null : row.state === "checking" || !live ? l?.price_toman ?? null : null,
+      confirmed: liveOk ? live!.match === "exact" || live!.match === "pinned" || !live!.match : true,
       inStock: liveOk ? live!.in_stock !== false : l?.in_stock !== false,
       fresh: liveOk,
     };
   });
-  const candidates = display.filter((d) => d.price && d.inStock);
+  const candidates = display.filter((d) => d.price && d.inStock && d.confirmed);
   const lowest = candidates.length ? Math.min(...candidates.map((d) => d.price!)) : null;
 
   return (
@@ -174,7 +189,7 @@ export function PriceChecker({
           </thead>
           <tbody>
             {display.map(({ site, row, live, last: l, price, inStock, fresh }) => {
-              const isLowest = !!price && price === lowest && inStock;
+              const isLowest = !!price && price === lowest && inStock && display.find((d) => d.site === site)!.confirmed;
               const failed = live && live.status !== "ok";
               const shown = fresh ? live! : l;
               const pinnedUrl = urls[site];
@@ -206,6 +221,16 @@ export function PriceChecker({
                       <span className="text-muted">—</span>
                     ) : null}
                     {failed && price && <div className="text-xs text-bad">{live!.message}</div>}
+                    {failed && live!.suggestion && (
+                      <div className="mt-1.5 max-w-md rounded-lg border border-border bg-row px-2.5 py-1.5 text-xs leading-relaxed" data-testid={`suggestion-${site}`}>
+                        <span className="text-muted">نزدیک‌ترین نتیجه: </span>
+                        {live!.suggestion.url ? <a href={live!.suggestion.url} target="_blank" rel="noopener noreferrer" className="hover:underline">{live!.suggestion.title}</a> : live!.suggestion.title}
+                        {live!.suggestion.price_toman ? <span className="ms-1 font-semibold">({formatToman(live!.suggestion.price_toman)})</span> : null}
+                        {live!.suggestion.url && (
+                          <button className="ms-2 text-accent underline" onClick={() => pinAndRecheck(site, live!.suggestion!.url!)}>همین کالاست</button>
+                        )}
+                      </div>
+                    )}
                     {fresh && live!.title && (
                       <div className="mt-1 max-w-md text-xs leading-relaxed text-muted">
                         {live!.title}{" "}

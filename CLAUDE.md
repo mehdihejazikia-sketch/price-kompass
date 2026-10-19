@@ -18,3 +18,8 @@
   only against mock pages (`e2e/fixtures/`); real sites can't be reached from the cloud environment.
   If a site fails on a real PC, fix `extension/parsers/<site>.js` and bump the manifest version.
 - e2e tests bind port 443 for the mock shop server (`e2e/fixtures/shop-server.ts`), so they run as root.
+- Matching (Oct 2026): `extension/match.js` is shared by the extension and the website
+  (`src/lib/match.ts`, `src/lib/sources/evaluate.ts`). A result must agree on product type,
+  brand and model; wrong products become «پیدا نشد» with a suggestion. Only exact/pinned
+  results count as the price (`CONFIRMED` in `src/lib/server/prices.ts`). Search term default =
+  cleaned product name (migration 003). Extension 1.1.0 sends all candidates to the website.

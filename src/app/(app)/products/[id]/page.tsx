@@ -27,6 +27,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           id: product.id,
           name: product.name,
           model: product.model,
+          brand: product.brand,
           search_term: product.search_term,
           urls: { torob: product.url_torob, digikala: product.url_digikala, emalls: product.url_emalls },
         }}

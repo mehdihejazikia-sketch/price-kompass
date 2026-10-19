@@ -96,7 +96,7 @@ export async function exportRows(companyId: number) {
     `SELECT ${COLS},
             COALESCE((SELECT jsonb_object_agg(site, price_toman) FROM (
                SELECT DISTINCT ON (site) site, price_toman FROM price_checks
-                WHERE product_id = p.id AND status = 'ok' ORDER BY site, checked_at DESC) x), '{}'::jsonb) AS prices,
+                WHERE product_id = p.id AND status = 'ok' AND (match IS NULL OR match IN ('exact', 'pinned')) ORDER BY site, checked_at DESC) x), '{}'::jsonb) AS prices,
             (SELECT max(checked_at) FROM price_checks WHERE product_id = p.id) AS last_checked
        FROM products p WHERE company_id = $1 AND deleted_at IS NULL AND inactive_at IS NULL
       ORDER BY sort_order NULLS LAST, id`,
