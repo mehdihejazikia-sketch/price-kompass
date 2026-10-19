@@ -43,6 +43,33 @@ describe.skipIf(!available)("database", () => {
     expect(out).not.toContain("applying");
   });
 
+  it("syncs the admin user from the environment on every deploy", async () => {
+    const { syncAdmin } = await import("../scripts/sync-admin.mjs");
+    const { login } = await import("@/lib/server/auth");
+    const c = new pg.Client({ connectionString: DB_URL });
+    await c.connect();
+    const lines: string[] = [];
+    const log = { log: (m: string) => lines.push(m), warn: (m: string) => lines.push(m) };
+    try {
+      // existing admin, new password → updated, old password stops working
+      expect(await syncAdmin(c, { ADMIN_USERNAME: "admin", ADMIN_PASSWORD: "new-secret-99\n" }, log)).toBe("updated");
+      await expect(login("admin", "admin12345")).rejects.toThrow();
+      await expect(login("Admin", "new-secret-99")).resolves.toHaveProperty("token");
+      // same password again → unchanged
+      expect(await syncAdmin(c, { ADMIN_USERNAME: "admin", ADMIN_PASSWORD: "new-secret-99" }, log)).toBe("unchanged");
+      // a different username → created in the existing company, as admin
+      expect(await syncAdmin(c, { ADMIN_USERNAME: "mehdi", ADMIN_PASSWORD: "mehdi-pass-1" }, log)).toBe("created");
+      const r = (await c.query("SELECT u.role, u.company_id = a.company_id AS same FROM users u, users a WHERE u.username = 'mehdi' AND a.username = 'admin'")).rows[0];
+      expect(r).toEqual({ role: "admin", same: true });
+      expect(lines.join("\n")).toContain("[hooshmand] synced user mehdi");
+      expect(lines.join("\n")).not.toMatch(/secret|mehdi-pass/);
+      // restore for the following tests
+      await syncAdmin(c, { ADMIN_USERNAME: "admin", ADMIN_PASSWORD: "admin12345" }, log);
+    } finally {
+      await c.end();
+    }
+  });
+
   async function runImport(rows: Record<string, string>[], fileName: string, missingMode: "deactivate" | "delete" = "deactivate") {
     const id = await P.startImport(companyId, userId, fileName, missingMode);
     for (let off = 0; off < rows.length; off += 1000) await P.addImportRows(companyId, id, off, rows.slice(off, off + 1000));

@@ -16,8 +16,10 @@ username/password accounts, installable PWA, Manifest V3 extension in `/extensio
    `DATABASE_URL_UNPOOLED` automatically.
 3. **Environment variables** (*Settings → Environment Variables*):
    - `ADMIN_USERNAME`: your admin login, e.g. `mehdi`
-   - `ADMIN_PASSWORD`: a strong password (8+ characters). Used only once, to create the
-     first admin when the database has no users. Change it later in the app (حساب کاربری).
+   - `ADMIN_PASSWORD`: a strong password (8+ characters). On **every** deploy this account is
+     created or updated (password, admin role, unlocked); the build log shows
+     `[hooshmand] synced user <name>`. These variables are the source of truth: a password
+     changed in the app is reset to `ADMIN_PASSWORD` on the next deploy.
    - `ADMIN_COMPANY`: company name shown in the footer (optional)
 4. **Redeploy** (*Deployments → … → Redeploy*) so the build sees the database and variables.
 

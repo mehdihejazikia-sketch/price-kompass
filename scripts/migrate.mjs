@@ -1,10 +1,11 @@
-// Applies migrations/*.sql in order, once each, and creates the first admin.
+// Applies migrations/*.sql in order, once each, then creates/updates the admin
+// account from ADMIN_USERNAME / ADMIN_PASSWORD (scripts/sync-admin.mjs).
 // Runs on every Vercel build. Append-only: it never drops anything.
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import pg from "pg";
 import { loadEnv, databaseUrl, sslFor } from "./env.mjs";
-import { hashPassword } from "./password.mjs";
+import { syncAdmin } from "./sync-admin.mjs";
 
 loadEnv();
 const url = databaseUrl({ direct: true });
@@ -45,21 +46,7 @@ try {
     }
   }
 
-  const { rows } = await client.query("SELECT count(*)::int AS n FROM users");
-  if (rows[0].n === 0) {
-    const username = (process.env.ADMIN_USERNAME || "").trim();
-    const password = process.env.ADMIN_PASSWORD || "";
-    if (!username || password.length < 8) {
-      console.warn("[migrate] No users yet. Set ADMIN_USERNAME and ADMIN_PASSWORD (8+ chars) and redeploy to create the admin.");
-    } else {
-      const company = (await client.query("INSERT INTO companies (name) VALUES ($1) RETURNING id",
-        [process.env.ADMIN_COMPANY || "شرکت"])).rows[0];
-      await client.query(
-        "INSERT INTO users (company_id, username, display_name, password_hash, role) VALUES ($1, $2, $3, $4, 'admin')",
-        [company.id, username, "مدیر", hashPassword(password)]);
-      console.log(`[migrate] created admin user "${username}"`);
-    }
-  }
+  await syncAdmin(client);
   console.log("[migrate] done");
 } finally {
   await client.query("SELECT pg_advisory_unlock(727274)").catch(() => {});
