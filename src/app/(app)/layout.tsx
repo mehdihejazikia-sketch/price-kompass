@@ -5,6 +5,7 @@ import { Nav } from "@/components/Nav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserMenu } from "@/components/UserMenu";
 import { UpdateNotice } from "@/components/UpdateNotice";
+import { InstallApp } from "@/components/InstallApp";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
@@ -18,6 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </Link>
           <Nav admin={user.role === "admin"} />
           <div className="ms-auto flex items-center gap-2">
+            <InstallApp />
             <ThemeToggle />
             <UserMenu name={user.display_name || user.username} />
           </div>

@@ -15,7 +15,7 @@ const targets = [
   ["public/icons/icon-512.png", 512, false],
   ["public/icons/maskable-512.png", 512, true],
   ["public/icons/apple-touch-icon.png", 180, true],
-  ["public/favicon-32.png", 32, false],
+  ["public/icons/favicon-32.png", 32, false],
   ["extension/icons/icon-16.png", 16, false],
   ["extension/icons/icon-32.png", 32, false],
   ["extension/icons/icon-48.png", 48, false],

@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   description: "استعلام لحظه‌ای قیمت کالا در ترب، دیجی‌کالا و ایمالز",
   applicationName: "قیمت‌یاب",
   robots: { index: false, follow: false },
-  icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
+  icons: { icon: [{ url: "/icons/favicon-32.png", sizes: "32x32" }, { url: "/icons/icon-192.png", sizes: "192x192" }], apple: "/icons/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {

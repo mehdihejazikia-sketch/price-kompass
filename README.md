@@ -54,6 +54,22 @@ npm run test:e2e            # browser tests (Playwright, uses database pk_test)
 - «دانلود اکسل» writes the same layout (plus model, search term, last prices) and can be re-uploaded.
 - The real accounting file for tests goes in `samples/products.xlsx` (git-ignored, never committed).
 
+## Live prices: the browser extension
+- Install page on the site: «افزونه» (download zip → Load unpacked in `edge://extensions` or
+  `chrome://extensions`, Developer mode on). The zip is built on every deploy with the site's own
+  domain allowed (`externally_connectable`); for a custom domain set `EXTENSION_ALLOWED_ORIGINS`.
+- Opening a product checks Torob, Digikala and eMalls one after another in background tabs, saves
+  every result to the price history and shows the last known prices instantly meanwhile.
+- «این کالای درست است» pins that product page, so later checks open it directly.
+- One parser per site in `extension/parsers/`; see `extension/README.md` when a site changes.
+- Other price sources (official partner APIs, a search API) plug in via
+  `src/lib/server/sources/index.ts` without UI changes.
+
+## Install as a desktop app
+In Edge or Chrome, «نصب برنامه» in the header (or the install icon in the address bar) installs
+قیمت‌یاب as a Windows app with its own window and Start-menu entry. It always loads the latest
+deploy; nothing private is cached offline.
+
 ## Data safety rules
 - Schema changes only via a **new** file in `migrations/` (never edit an applied one).
 - Products are soft-deleted (`deleted_at`), price history is append-only.

@@ -18,6 +18,11 @@
   --warn: #a15c07;
   --warn-soft: #fdf4e3;
   --row: #fafbfc;
+  /* series colors (validated categorical slots: orange, aqua, blue) */
+  --site-torob: #eb6834;
+  --site-digikala: #1baf7a;
+  --site-emalls: #2a78d6;
+  --grid: #eceef1;
   color-scheme: light;
 }
 .dark {
@@ -36,6 +41,10 @@
   --warn: #fbbf24;
   --warn-soft: #33270c;
   --row: #1b1f26;
+  --site-torob: #d95926;
+  --site-digikala: #199e70;
+  --site-emalls: #3987e5;
+  --grid: #242932;
   color-scheme: dark;
 }
 

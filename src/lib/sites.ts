@@ -2,9 +2,10 @@ export const SITES = ["torob", "digikala", "emalls"] as const;
 export type SiteId = (typeof SITES)[number];
 
 export const SITE_INFO: Record<SiteId, { label: string; home: string; color: string }> = {
-  torob: { label: "ترب", home: "https://torob.com", color: "#e8590c" },
-  digikala: { label: "دیجی‌کالا", home: "https://www.digikala.com", color: "#ef394e" },
-  emalls: { label: "ایمالز", home: "https://emalls.ir", color: "#1c7ed6" },
+  // chart/series colors: CSS variables (light + dark steps, colorblind-checked)
+  torob: { label: "ترب", home: "https://torob.com", color: "var(--site-torob)" },
+  digikala: { label: "دیجی‌کالا", home: "https://www.digikala.com", color: "var(--site-digikala)" },
+  emalls: { label: "ایمالز", home: "https://emalls.ir", color: "var(--site-emalls)" },
 };
 
 /** The site's own search page, for the manual fallback button. */

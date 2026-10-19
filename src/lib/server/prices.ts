@@ -108,4 +108,18 @@ export async function recentChecks(companyId: number, opts: { limit?: number; si
   );
 }
 
+/** Products checked most recently (home page), with their lowest last price. */
+export async function recentProducts(companyId: number, limit = 8) {
+  return query<{ product_id: number; name: string; internal_code: string; checked_at: string; min_price: number | null }>(
+    `SELECT p.id AS product_id, p.name, p.internal_code, x.checked_at,
+            (SELECT min(price_toman) FROM (SELECT DISTINCT ON (site) price_toman, in_stock FROM price_checks
+               WHERE product_id = p.id AND status = 'ok' ORDER BY site, checked_at DESC) l WHERE l.in_stock IS NOT FALSE) AS min_price
+       FROM (SELECT product_id, max(checked_at) AS checked_at FROM price_checks WHERE company_id = $1
+              GROUP BY product_id ORDER BY max(checked_at) DESC LIMIT $2) x
+       JOIN products p ON p.id = x.product_id AND p.deleted_at IS NULL
+      ORDER BY x.checked_at DESC`,
+    [companyId, limit],
+  );
+}
+
 export { SITES };
