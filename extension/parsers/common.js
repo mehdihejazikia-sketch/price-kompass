@@ -154,6 +154,25 @@
     return r.json();
   }
 
+  /** A short description of the page (shown in the popup's test result). */
+  function pageSnapshot() {
+    const links = [...document.querySelectorAll("a[href]")]
+      .map((a) => ({ text: (a.innerText || a.getAttribute("title") || "").trim().replace(/\s+/g, " ").slice(0, 60), href: a.getAttribute("href") }))
+      .filter((l) => l.text && l.href && !l.href.startsWith("#") && !l.href.startsWith("javascript"));
+    const classes = {};
+    for (const el of document.querySelectorAll("[class]")) for (const c of el.classList) if (/prod|item|card|price|result|search/i.test(c)) classes[c] = (classes[c] || 0) + 1;
+    return {
+      url: location.href,
+      title: document.title,
+      text: (document.body?.innerText ?? "").replace(/\s+/g, " ").slice(0, 500),
+      links: links.length,
+      sampleLinks: links.slice(20, 35),
+      classes: Object.entries(classes).sort((a, b) => b[1] - a[1]).slice(0, 25).map(([c, n]) => `${c}:${n}`).join(" "),
+      generator: document.querySelector('meta[name="generator"]')?.getAttribute("content") ?? null,
+      prices: visiblePrices().slice(0, 5),
+    };
+  }
+
   globalThis.__pkParsers = globalThis.__pkParsers || {};
   globalThis.__pk = { toLatin, parseNumber, sleep, waitFor, jsonLd, nextData, findAll, isType, productFromJsonLd, abs, visiblePrices, reconcile, blockedReason, fetchJson };
 
@@ -164,6 +183,8 @@
     try {
       const res = await parser(ctx, globalThis.__pk);
       if ((!res || !res.candidates?.length) && blockedReason()) return { blocked: blockedReason(), kind: res?.kind ?? "unknown", candidates: [] };
+      // nothing found: report what the page looked like, for fixing the parser remotely
+      if (res && res.kind !== "navigating" && !res.candidates?.length) res.debug = pageSnapshot();
       return res;
     } catch (e) {
       return { error: String(e?.message || e), candidates: [] };

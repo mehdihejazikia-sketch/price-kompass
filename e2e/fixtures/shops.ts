@@ -103,3 +103,7 @@ export const hooshmandProduct = () =>
       <ul class="list-unstyled"><li>وضعیت: موجود</li></ul>
       <ul class="list-unstyled"><li><h2>۴٬۵۰۰٬۰۰۰ تومان</h2></li></ul></div></div>
     <h3>محصولات مرتبط</h3><div class="product-thumb"><div class="caption"><h4><a href="/cable">کابل HDMI</a></h4><p class="price">۲۵۰٬۰۰۰ تومان</p></div></div></div>`);
+
+// OpenCart search with no hits (OpenCart needs every word of the search in the name)
+export const hooshmandNoResults = () =>
+  page(`<h1>جستجو</h1><p>هیچ محصولی مطابق با معیارهای جستجو وجود ندارد.</p>`, `<link href="/catalog/view/theme/default/stylesheet/stylesheet.css" rel="stylesheet">`);

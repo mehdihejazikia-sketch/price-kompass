@@ -43,3 +43,8 @@
   (`searchTpl:hooshmand`). Extension 1.3.0; older extensions get «افزونه را به‌روز کنید» for it.
   Adding another site: `src/lib/sites.ts`, `extension/sites.js` + manifest host permission,
   a parser file, a `url_<site>` column (migration) and the url_* lists in products/importDiff.
+- Extension 1.4.0: when the full name finds nothing (or only wrong products), each site is searched
+  again with the model code alone. A "not found" result carries `debug` (url, title, start of the
+  page text, sample links, product/price CSS classes) so the popup test shows what the page looked
+  like. Hooshmand: even `index.php?route=product/search&search=NK8800` returned no readable results
+  on the real site (Oct 20) — waiting for the user's own search address / debug output.

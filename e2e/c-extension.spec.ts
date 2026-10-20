@@ -59,6 +59,8 @@ test("live check for 88724 (GDM-248CS) on torob, digikala and emalls", async () 
   await expect(page.getByTestId("row-hooshmand")).toContainText("GDM-248CS");
   // OpenCart: the search box has no form, so its standard search address was used
   expect(shops.opened.some((u) => u.includes("route=product/search"))).toBe(true);
+  // the full name found nothing there, the second search with the model code did
+  expect(shops.opened.some((u) => u.includes("route=product/search&search=GDM-248CS"))).toBe(true);
 
   const torob = page.getByTestId("row-torob");
   await expect(torob).toContainText("GDM-248CS"); // found title, the right model (not GDM-278LN)

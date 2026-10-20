@@ -3,7 +3,7 @@
 // site's search page (or the pinned product page) in a background tab, read
 // the price from the page, close the tab and send the result back.
 import { SITES, LABELS, searchUrl, belongsTo } from "./sites.js";
-import { pickBest } from "./match.js";
+import { compact, pickBest } from "./match.js";
 
 const VERSION = chrome.runtime.getManifest().version;
 const PAGE_TIMEOUT = 35000;
@@ -59,6 +59,8 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
 
 export async function checkSite(site, product) {
   const term = String(product.search_term || product.model || product.name || "").trim();
+  // the model code (NK8800, GDM-248CS…) for a second search; also found in the term itself
+  const model = String(product.model || (term.match(/[A-Za-z0-9]*[A-Za-z][A-Za-z0-9]*\d[A-Za-z0-9-]*|[A-Za-z0-9]*\d[A-Za-z0-9]*[A-Za-z][A-Za-z0-9-]*/) ?? [""])[0]).trim();
   const pinned = product.urls?.[site] && belongsTo(site, product.urls[site]) ? product.urls[site] : null;
   const pageUrl = pinned || (await startUrl(site, term));
   const base = { site, page_url: pageUrl, pinned: !!pinned, checked_at: new Date().toISOString() };
@@ -69,14 +71,32 @@ export async function checkSite(site, product) {
     const tab = await chrome.tabs.create({ url: pageUrl, active: false });
     tabId = tab.id;
     await chrome.tabs.update(tabId, { autoDiscardable: false }).catch(() => {});
-    const parsed = await readTab(tabId, site, { term, model: product.model || "", pinned: !!pinned });
+    let parsed = await readTab(tabId, site, { term, model, pinned: !!pinned });
     if (LEARNED.includes(site) && !pinned) await learnSearchUrl(site, parsed, term);
+    let usedTerm = term;
+    // Nothing (or nothing that fits) for the full name? Shops spell names differently
+    // («کیبرد» / «کیبورد», «رپو» / «Rapoo»), so search once more with the model code alone.
+    if (!pinned && model && compact(model) !== compact(term) && !parsed.error && !parsed.blocked && parsed.kind !== "product") {
+      const first = parsed.candidates ?? [];
+      if (!first.length || pickBest(first, product)?.match === "weak") {
+        await chrome.tabs.update(tabId, { url: await startUrl(site, model) });
+        await new Promise((r) => setTimeout(r, 800));
+        const retry = await readTab(tabId, site, { term: model, model, pinned: false });
+        const retryCands = retry.candidates ?? [];
+        if (!retry.error && !retry.blocked && retryCands.length && (!first.length || pickBest(retryCands, product)?.match !== "weak")) {
+          parsed = retry;
+          usedTerm = model;
+        }
+      }
+    }
     if (parsed.error) return { ...base, status: "error", message: `خواندن صفحه ${LABELS[site]} ممکن نشد. (${parsed.error})` };
     if (parsed.blocked) return { ...base, status: "error", message: parsed.blocked };
     const candidates = parsed.candidates ?? [];
     if (!candidates.length) {
-      return { ...base, status: "not_found", message: parsed.kind === "product" ? "قیمت در صفحه کالا پیدا نشد." : `کالایی با «${term}» در ${LABELS[site]} پیدا نشد.` };
+      const tried = model && compact(model) !== compact(term) ? `«${term}» و «${model}»` : `«${term}»`;
+      return { ...base, status: "not_found", message: parsed.kind === "product" ? "قیمت در صفحه کالا پیدا نشد." : `کالایی با ${tried} در ${LABELS[site]} پیدا نشد.`, debug: parsed.debug };
     }
+    base.search_term = usedTerm;
     const best = parsed.kind === "product" ? { ...candidates[0], match: "pinned" } : pickBest(candidates, product);
     if (!best) return { ...base, status: "not_found", message: "نتیجه‌ای پیدا نشد." };
     const currency = best.currency === "IRR" ? "IRR" : "IRT";
