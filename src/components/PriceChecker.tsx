@@ -23,11 +23,14 @@ export function PriceChecker({
   product,
   initialLast,
   serverSources,
+  ownPrice = null,
   onSaved,
 }: {
   product: CheckProduct;
   initialLast: StoredCheck[];
   serverSources: ServerSourceInfo[];
+  /** our «سطح ۱» price, to compare each shop with */
+  ownPrice?: number | null;
   onSaved?: () => void;
 }) {
   const [rows, setRows] = useState<Record<SiteId, Row>>(() => Object.fromEntries(SITES.map((s) => [s, { state: "idle" }])) as Record<SiteId, Row>);
@@ -153,7 +156,7 @@ export function PriceChecker({
   return (
     <section className="card overflow-hidden">
       <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
-        <h2 className="font-bold">قیمت‌ها</h2>
+        <h2 className="font-bold">قیمت در سایت‌ها</h2>
         <span className="text-sm text-muted">
           جستجو با: <span className="ltr font-medium text-fg">{term}</span>
         </span>
@@ -180,6 +183,7 @@ export function PriceChecker({
             <tr>
               <th>سایت</th>
               <th>قیمت</th>
+              {ownPrice ? <th>نسبت به سطح ۱</th> : null}
               <th>فروشنده</th>
               <th>موجودی</th>
               <th>لینک</th>
@@ -238,6 +242,11 @@ export function PriceChecker({
                       </div>
                     )}
                   </td>
+                  {ownPrice ? (
+                    <td className="whitespace-nowrap text-sm" data-testid={`vs-${site}`}>
+                      {price ? <VsOwn price={price} own={ownPrice} /> : <span className="text-muted">—</span>}
+                    </td>
+                  ) : null}
                   <td className="whitespace-nowrap text-sm">
                     {shown?.seller_count ? `${faNum(shown.seller_count)} فروشنده` : shown?.seller || <span className="text-muted">—</span>}
                   </td>
@@ -278,5 +287,16 @@ export function PriceChecker({
         </table>
       </div>
     </section>
+  );
+}
+
+/** "۸٪ ارزان‌تر" (shop below our price: watch out) / "۵٪ گران‌تر" */
+function VsOwn({ price, own }: { price: number; own: number }) {
+  const pct = Math.round(((price - own) / own) * 100);
+  if (pct === 0) return <span className="text-muted">برابر</span>;
+  return pct < 0 ? (
+    <span className="text-bad" title={`${formatToman(own - price)} ارزان‌تر از قیمت ما`}>{faNum(-pct)}٪ ارزان‌تر</span>
+  ) : (
+    <span className="text-good" title={`${formatToman(price - own)} گران‌تر از قیمت ما`}>{faNum(pct)}٪ گران‌تر</span>
   );
 }

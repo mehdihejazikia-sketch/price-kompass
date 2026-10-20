@@ -54,7 +54,11 @@ npm run test:e2e            # browser tests (Playwright, uses database pk_test)
   Missing products become «غیرفعال» (hidden from search, history kept) unless «حذف» is chosen.
 - Every import is logged; the latest one can be undone.
 - «دانلود اکسل» writes the same layout (plus model, search term, last prices) and can be re-uploaded.
-- The real accounting file for tests goes in `samples/products.xlsx` (git-ignored, never committed).
+- The price-board export («تابلوي قيمت کالاها») also brings our own prices «سطح 1» / «سطح 2»
+  (Rial in the file, shown in Toman; switch in the preview). They appear in their own box above
+  the shop prices, in the product list and in the search suggestions; changes are kept as history.
+- The columns of every import are remembered, so the next upload of the same file needs one click.
+- The real accounting files for tests go in `samples/` (git-ignored, never committed).
 
 ## Live prices: the browser extension
 - Install page on the site: «افزونه» (download zip → Load unpacked in `edge://extensions` or

@@ -27,3 +27,9 @@
   types into eMalls' own search box, and remembers the results address as a template in
   `chrome.storage.local` (`emallsSearch`); a 404 clears it. The website's fallback button opens
   the eMalls home page until the real search address format is known.
+- Own prices (Oct 2026): the accounting «تابلوي قيمت کالاها» export has «سطح 2», «سطح 1» (Rial),
+  «نام كالا», «كد كالا», «رديف» and a footer date "[today DD/MM/YYYY]". Stored in Toman as
+  `products.price_level1/2` (migration 004), history in `system_prices`. The columns of each
+  successful import are saved as the company's import format (incl. `price_unit`). Product page:
+  «قیمت‌های سیستم» box above «قیمت در سایت‌ها» (with a «نسبت به سطح ۱» column). Export uses the
+  same layout. Real file for tests: `samples/products-prices.xlsx` (git-ignored).

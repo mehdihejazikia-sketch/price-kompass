@@ -52,3 +52,11 @@ export function formatDateTime(date: string | Date): string {
 export function formatDay(date: string | Date): string {
   return dayFmt.format(typeof date === "string" ? new Date(date) : date);
 }
+
+const dateOnlyFmt = new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium" });
+
+/** "۲۸ مهر ۱۴۰۵" (accepts "2026-10-20") */
+export function formatDate(date: string | Date): string {
+  const d = typeof date === "string" ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}T12:00:00` : date) : date;
+  return dateOnlyFmt.format(d);
+}

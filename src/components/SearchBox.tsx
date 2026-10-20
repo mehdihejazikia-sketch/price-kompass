@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/client";
+import { formatToman } from "@/lib/format";
 
-type Hit = { id: number; internal_code: string; name: string; model: string; exact: boolean };
+type Hit = { id: number; internal_code: string; name: string; model: string; price_level1: number | null; exact: boolean };
 
 /**
  * Focused on load. Typing shows suggestions; ↑/↓ choose, Enter opens,
@@ -106,6 +107,7 @@ export function SearchBox({ autoFocus = true, compact = false }: { autoFocus?: b
             >
               <span className="flex-1">{h.name}</span>
               {h.model && <span className="ltr text-xs text-muted">{h.model}</span>}
+              {h.price_level1 ? <span className="text-xs font-medium">{formatToman(h.price_level1)}</span> : null}
               <span className={`ltr min-w-16 text-end text-sm ${h.exact ? "font-bold text-accent" : "text-muted"}`}>{h.internal_code || "—"}</span>
             </li>
           ))}

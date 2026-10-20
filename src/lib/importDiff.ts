@@ -10,7 +10,7 @@
 // - identical rows (same code and name) are separate products, paired in order
 import { defaultSearchTerm, extractModel } from "./model";
 import { normalizeCode, normalizeName } from "./normalize";
-import { cleanProduct, type CleanProduct, type ProductField, type ProductInput } from "./products";
+import { cleanProduct, type CleanProduct, type PriceUnit, type ProductField, type ProductInput } from "./products";
 
 export type ExistingProduct = {
   id: number;
@@ -23,6 +23,8 @@ export type ExistingProduct = {
   url_digikala: string | null;
   url_emalls: string | null;
   sort_order: number | null;
+  price_level1: number | null;
+  price_level2: number | null;
   inactive: boolean;
 };
 
@@ -30,18 +32,19 @@ export type FinalRow = Omit<ExistingProduct, "id" | "inactive">;
 
 export type FileRow = CleanProduct & { idx: number; code_norm: string; name_norm: string };
 
-export type Change = "name" | "code" | "model" | "search_term" | "brand" | "url" | "reactivate" | "sort";
+export type Change = "name" | "code" | "price" | "model" | "search_term" | "brand" | "url" | "reactivate" | "sort";
 
 export type Entry =
   | { kind: "new"; row: FileRow; final: FinalRow }
   | { kind: "match"; row: FileRow; existing: ExistingProduct; final: FinalRow; changes: Change[] };
 
-export type Category = "new" | "name_changed" | "other_changed" | "unchanged";
+export type Category = "new" | "name_changed" | "price_changed" | "other_changed" | "unchanged";
 
 export type DiffCounts = {
   total: number;
   new: number;
   name_changed: number;
+  price_changed: number;
   other_changed: number;
   unchanged: number;
   missing: number;
@@ -62,6 +65,7 @@ export type Diff = {
 export function categoryOf(e: Entry): Category {
   if (e.kind === "new") return "new";
   if (e.changes.includes("name")) return "name_changed";
+  if (e.changes.includes("price")) return "price_changed";
   if (e.changes.some((c) => c !== "sort")) return "other_changed";
   return "unchanged";
 }
@@ -85,12 +89,17 @@ function group<T>(items: T[], key: (t: T) => string): Map<string, T[]> {
   return m;
 }
 
-export function diffProducts(inputs: ProductInput[], existing: ExistingProduct[], provided: ProductField[]): Diff {
+export function diffProducts(
+  inputs: ProductInput[],
+  existing: ExistingProduct[],
+  provided: ProductField[],
+  opts: { priceUnit?: PriceUnit } = {},
+): Diff {
   const has = new Set(provided);
   const invalid: Diff["invalid"] = [];
   const rows: FileRow[] = [];
   inputs.forEach((input, idx) => {
-    const { product, errors } = cleanProduct(input);
+    const { product, errors } = cleanProduct(input, opts.priceUnit ?? "IRR");
     const fatal = errors.filter((e) => !e.includes("لینک"));
     if (!product.name && !product.internal_code) return; // blank line
     if (fatal.length) {
@@ -158,6 +167,7 @@ export function diffProducts(inputs: ProductInput[], existing: ExistingProduct[]
     total: rows.length,
     new: 0,
     name_changed: 0,
+    price_changed: 0,
     other_changed: 0,
     unchanged: 0,
     missing: missing.length,
@@ -182,6 +192,8 @@ function finalForNew(c: CleanProduct): FinalRow {
     url_digikala: c.url_digikala || null,
     url_emalls: c.url_emalls || null,
     sort_order: c.sort_order,
+    price_level1: c.price_level1,
+    price_level2: c.price_level2,
   };
 }
 
@@ -208,6 +220,9 @@ export function mergeRow(c: FileRow, old: ExistingProduct, has: Set<ProductField
     url_digikala: c.url_digikala || old.url_digikala,
     url_emalls: c.url_emalls || old.url_emalls,
     sort_order: has.has("sort_order") && c.sort_order !== null ? c.sort_order : old.sort_order,
+    // a price column in the file is the truth: an empty cell means "no price"
+    price_level1: has.has("price_level1") ? c.price_level1 : old.price_level1,
+    price_level2: has.has("price_level2") ? c.price_level2 : old.price_level2,
   };
 }
 
@@ -215,6 +230,7 @@ function changesOf(old: ExistingProduct, f: FinalRow): Change[] {
   const ch: Change[] = [];
   if (old.name !== f.name) ch.push("name");
   if (old.internal_code !== f.internal_code) ch.push("code");
+  if ((old.price_level1 ?? null) !== (f.price_level1 ?? null) || (old.price_level2 ?? null) !== (f.price_level2 ?? null)) ch.push("price");
   if ((old.model || "") !== f.model) ch.push("model");
   if ((old.search_term || "") !== f.search_term) ch.push("search_term");
   if ((old.brand || "") !== f.brand) ch.push("brand");
@@ -227,6 +243,7 @@ function changesOf(old: ExistingProduct, f: FinalRow): Change[] {
 export const CHANGE_LABELS: Record<Change, string> = {
   name: "نام",
   code: "کد",
+  price: "قیمت",
   model: "مدل",
   search_term: "عبارت جستجو",
   brand: "برند",

@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/client";
-import { faNum, formatDateTime } from "@/lib/format";
+import { faNum, formatDate, formatDateTime, formatToman } from "@/lib/format";
 import { CHANGE_LABELS, categoryOf, diffProducts, type Category, type ExistingProduct, type Entry } from "@/lib/importDiff";
 import { FIELD_LABELS, PRODUCT_FIELDS } from "@/lib/products";
 import {
-  autoMap, columnLetter, detectFormat, formatFromMapping, guessHeaderRow, mappedRows, providedFields, readWorkbook,
+  autoMap, columnLetter, detectFormat, findFileDate, formatFromMapping, guessHeaderRow, mappedRows, providedFields, readWorkbook,
   type ImportFormat, type Mapping, type Sheet,
 } from "@/lib/sheet";
 
@@ -29,6 +29,7 @@ export default function ImportWizard() {
   const [map, setMap] = useState<Mapping | null>(null);
   const [manual, setManual] = useState(false);
   const [saveFormat, setSaveFormat] = useState(true);
+  const [priceUnit, setPriceUnit] = useState<"IRR" | "IRT">("IRR");
   const [missingMode, setMissingMode] = useState<"deactivate" | "delete">("deactivate");
   const [filter, setFilter] = useState<Filter>("all");
   const [busy, setBusy] = useState<string>("");
@@ -58,7 +59,9 @@ export default function ImportWizard() {
   const inputs = useMemo(() => (map ? mappedRows(dataRows, map) : []), [dataRows, map]);
   const provided = useMemo(() => (map ? providedFields(map) : []), [map]);
   const ready = !!map && map.name >= 0 && !manual;
-  const diff = useMemo(() => (ready ? diffProducts(inputs, existing, provided) : null), [ready, inputs, existing, provided]);
+  const diff = useMemo(() => (ready ? diffProducts(inputs, existing, provided, { priceUnit }) : null), [ready, inputs, existing, provided, priceUnit]);
+  const hasPrices = provided.includes("price_level1") || provided.includes("price_level2");
+  const fileDate = useMemo(() => (sheet ? findFileDate(sheet.rows) : null), [sheet]);
 
   async function onFile(file: File | undefined) {
     if (!file || !loaded.current) return;
@@ -73,6 +76,7 @@ export default function ImportWizard() {
       if (!list.length) throw new Error("فایل خالی است.");
       setFileName(file.name);
       setSheets(list);
+      setPriceUnit(format.price_unit ?? "IRR");
       // the saved format, on whichever sheet has it
       for (let i = 0; i < list.length; i++) {
         const found = detectFormat(list[i].rows, format);
@@ -111,7 +115,11 @@ export default function ImportWizard() {
       setBusy("ثبت در فهرست کالاها…");
       const r = await apiFetch<Result>("/api/import/finish", {
         method: "POST",
-        json: { importId, provided, expectedRows: inputs.length, saveFormat: saveFormatNow ? formatFromMapping(headers, map) : undefined },
+        json: {
+          importId, provided, expectedRows: inputs.length, priceUnit, fileDate,
+          // the columns of this file become the remembered format for the next upload
+          saveFormat: saveFormatNow ? formatFromMapping(headers, map, priceUnit) : undefined,
+        },
       });
       setResult(r);
       await load();
@@ -147,7 +155,7 @@ export default function ImportWizard() {
 
   // a manual mapping is saved as the new default when the admin wants it
   const [usedManual, setUsedManual] = useState(false);
-  const saveFormatNow = usedManual && saveFormat;
+  const saveFormatNow = !usedManual || saveFormat;
   const lastDone = log.find((l) => l.status === "done");
 
   return (
@@ -171,6 +179,7 @@ export default function ImportWizard() {
             items={[
               ["جدید", result.new, "text-good"],
               ["نام تغییر کرده", result.name_changed, "text-accent"],
+              ["قیمت تغییر کرده", result.price_changed, "text-accent"],
               ["تغییرات دیگر", result.other_changed, "text-accent"],
               ["بدون تغییر", result.unchanged, "text-muted"],
               [result.deleted ? "حذف شده" : "غیرفعال شده", result.deactivated + result.deleted, "text-warn"],
@@ -256,6 +265,7 @@ export default function ImportWizard() {
                   ["all", "همه", diff.counts.total, ""],
                   ["new", "جدید", diff.counts.new, "text-good"],
                   ["name_changed", "نام تغییر کرده", diff.counts.name_changed, "text-accent"],
+                  ...(hasPrices ? [["price_changed", "قیمت تغییر کرده", diff.counts.price_changed, "text-accent"]] : []),
                   ["other_changed", "تغییرات دیگر", diff.counts.other_changed, "text-accent"],
                   ["unchanged", "بدون تغییر", diff.counts.unchanged, "text-muted"],
                   ["missing", "در فایل نیست", diff.counts.missing, "text-warn"],
@@ -274,7 +284,16 @@ export default function ImportWizard() {
                   </button>
                 ))}
               </div>
-              <DiffTable diff={diff} filter={filter} headerRow={headerRow} />
+              {hasPrices && (
+                <div className="flex flex-wrap items-center gap-4 border-t border-border px-4 py-2.5 text-sm" data-testid="price-unit">
+                  <span className="font-medium">قیمت‌های سیستم (سطح ۱ و ۲) در این فایل به</span>
+                  <label className="flex items-center gap-1.5"><input type="radio" name="unit" checked={priceUnit === "IRR"} onChange={() => setPriceUnit("IRR")} /> ریال</label>
+                  <label className="flex items-center gap-1.5"><input type="radio" name="unit" checked={priceUnit === "IRT"} onChange={() => setPriceUnit("IRT")} /> تومان</label>
+                  <span className="text-xs text-muted">در قیمت‌یاب همه قیمت‌ها به تومان نمایش داده می‌شوند.</span>
+                  {fileDate && <span className="ms-auto text-xs text-muted">تاریخ فایل: {formatDate(fileDate)}</span>}
+                </div>
+              )}
+              <DiffTable diff={diff} filter={filter} headerRow={headerRow} showPrices={hasPrices} />
               <div className="space-y-3 border-t border-border p-4">
                 {diff.counts.missing > 0 && (
                   <fieldset className="space-y-1 text-sm">
@@ -349,11 +368,12 @@ function Tiles({ items }: { items: [string, number, string][] }) {
 const CAT_BADGE: Record<Category, [string, string]> = {
   new: ["جدید", "bg-good-soft text-good"],
   name_changed: ["نام تغییر کرده", "bg-accent-soft text-accent"],
+  price_changed: ["قیمت تغییر کرده", "bg-accent-soft text-accent"],
   other_changed: ["تغییر", "bg-accent-soft text-accent"],
   unchanged: ["بدون تغییر", "bg-row text-muted"],
 };
 
-function DiffTable({ diff, filter, headerRow }: { diff: NonNullable<ReturnType<typeof diffProducts>>; filter: Filter; headerRow: number }) {
+function DiffTable({ diff, filter, headerRow, showPrices }: { diff: NonNullable<ReturnType<typeof diffProducts>>; filter: Filter; headerRow: number; showPrices: boolean }) {
   const [page, setPage] = useState(1);
   useEffect(() => setPage(1), [filter]);
   if (filter === "missing") {
@@ -389,7 +409,7 @@ function DiffTable({ diff, filter, headerRow }: { diff: NonNullable<ReturnType<t
   return (
     <div className="max-h-[480px] overflow-auto border-t border-border">
       <table className="table">
-        <thead className="sticky top-0 z-10 bg-card"><tr><th>ردیف</th><th>نام کالا</th><th>کد کالا</th><th>مدل</th><th>وضعیت</th></tr></thead>
+        <thead className="sticky top-0 z-10 bg-card"><tr><th>ردیف</th><th>نام کالا</th><th>کد کالا</th>{showPrices && <><th>قیمت سطح ۱</th><th>قیمت سطح ۲</th></>}<th>مدل</th><th>وضعیت</th></tr></thead>
         <tbody>
           {sorted.slice(0, page * PAGE).map((e) => {
             const cat = categoryOf(e);
@@ -401,6 +421,14 @@ function DiffTable({ diff, filter, headerRow }: { diff: NonNullable<ReturnType<t
                   {e.kind === "match" && e.changes.includes("name") && <div className="text-xs text-muted line-through">{e.existing.name}</div>}
                 </td>
                 <td className="ltr whitespace-nowrap text-start">{e.final.internal_code || <span className="text-muted">—</span>}</td>
+                {showPrices && (["price_level1", "price_level2"] as const).map((k) => (
+                  <td key={k} className="whitespace-nowrap">
+                    {e.final[k] ? formatToman(e.final[k]) : <span className="text-muted">—</span>}
+                    {e.kind === "match" && e.existing[k] !== e.final[k] && (
+                      <div className="text-xs text-muted line-through">{e.existing[k] ? formatToman(e.existing[k]) : "بدون قیمت"}</div>
+                    )}
+                  </td>
+                ))}
                 <td className="ltr text-start text-muted">{e.final.model}</td>
                 <td className="space-x-1 space-x-reverse whitespace-nowrap">
                   <span className={`badge ${CAT_BADGE[cat][1]}`}>{CAT_BADGE[cat][0]}</span>

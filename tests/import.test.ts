@@ -109,3 +109,32 @@ describe.skipIf(!existsSync(SAMPLE))("real accounting file (samples/products.xls
     expect(Date.now() - t0).toBeLessThan(5000);
   });
 });
+
+const SAMPLE2 = "samples/products-prices.xlsx";
+
+describe.skipIf(!existsSync(SAMPLE2))("real price-board file (samples/products-prices.xlsx)", () => {
+  it("reads «سطح 1» / «سطح 2» in Rial as Toman, the file date, and re-upload diffs prices", async () => {
+    const { findFileDate } = await import("@/lib/sheet");
+    const rows = rowsOf(readFileSync(SAMPLE2));
+    const f = detectFormat(rows, DEFAULT_IMPORT_FORMAT)!;
+    expect(f.headerRow).toBe(1);
+    expect(f.map.price_level1).toBe(2);
+    expect(f.map.price_level2).toBe(0);
+    expect(f.map.name).toBe(3);
+    expect(findFileDate(rows)).toBe("2026-10-20");
+    const inputs = mappedRows(rows.slice(f.headerRow + 1), f.map);
+    const d = diffProducts(inputs, [], providedFields(f.map), { priceUnit: "IRR" });
+    expect(d.counts.total).toBe(4527);
+    expect(d.counts.invalid).toBe(0);
+    expect(d.entries.filter((e) => e.final.price_level1).length).toBe(2606);
+    expect(d.entries.filter((e) => e.final.price_level2).length).toBe(245);
+    const usb = d.entries.find((e) => e.final.internal_code === "3560013")!;
+    expect(usb.final.price_level1).toBe(1650000); // 16,500,000 Rial
+
+    // the old file's products: same products, now with prices → "price changed"
+    const old = d.entries.map((e, i) => ({ id: i + 1, ...e.final, price_level1: null, price_level2: null, inactive: false }));
+    const again = diffProducts(inputs, old, providedFields(f.map), { priceUnit: "IRR" });
+    expect(again.counts.new).toBe(0);
+    expect(again.counts.price_changed).toBe(2607); // 2,606 with «سطح 1» + 1 with only «سطح 2»
+  });
+});

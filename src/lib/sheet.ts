@@ -6,7 +6,7 @@ import { HEADER_SYNONYMS, PRODUCT_FIELDS, type ProductField, type ProductInput }
 
 export type Sheet = { name: string; rows: string[][] };
 export type Mapping = Record<ProductField, number>; // column index or -1
-export type ImportFormat = Partial<Record<ProductField, string>>; // field → header text
+export type ImportFormat = Partial<Record<ProductField, string>> & { price_unit?: "IRR" | "IRT" }; // field → header text
 
 /**
  * Every cell as TEXT. Codes stay exactly as typed: no number conversion, no
@@ -129,8 +129,8 @@ export function guessHeaderRow(rows: string[][]): number {
   return 0;
 }
 
-export function formatFromMapping(headers: string[], map: Mapping): ImportFormat {
-  const f: ImportFormat = {};
+export function formatFromMapping(headers: string[], map: Mapping, priceUnit?: "IRR" | "IRT"): ImportFormat {
+  const f: ImportFormat = priceUnit ? { price_unit: priceUnit } : {};
   for (const k of PRODUCT_FIELDS) if (map[k] >= 0 && headers[map[k]]) f[k] = headers[map[k]];
   return f;
 }
@@ -151,4 +151,18 @@ export function columnLetter(i: number): string {
   let s = "";
   for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
   return s;
+}
+
+/**
+ * The date our accounting system prints under the table:
+ * "[today 20/10/2026][امروز  سه شنبه 28-7-1405]" → "2026-10-20".
+ */
+export function findFileDate(rows: string[][]): string | null {
+  for (const row of rows.slice(-8)) {
+    for (const cell of row) {
+      const m = /today\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i.exec(cell);
+      if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+    }
+  }
+  return null;
 }

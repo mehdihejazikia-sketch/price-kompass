@@ -1,10 +1,10 @@
 // Product shape + validation shared by the import wizard (browser) and the API.
 import { extractModel, defaultSearchTerm } from "./model";
-import { normalizeCode } from "./normalize";
+import { normalizeCode, toLatinDigits } from "./normalize";
 import { SITES, urlBelongsToSite, type SiteId } from "./sites";
 
 /** Import columns, in the order of our accounting export (then the optional extras). */
-export const PRODUCT_FIELDS = ["name", "internal_code", "sort_order", "model", "search_term", "brand", "url_torob", "url_digikala", "url_emalls"] as const;
+export const PRODUCT_FIELDS = ["name", "internal_code", "sort_order", "price_level1", "price_level2", "model", "search_term", "brand", "url_torob", "url_digikala", "url_emalls"] as const;
 export type ProductField = (typeof PRODUCT_FIELDS)[number];
 export type ProductInput = Partial<Record<ProductField, string>>;
 
@@ -19,6 +19,10 @@ export type Product = {
   url_digikala: string | null;
   url_emalls: string | null;
   sort_order: number | null;
+  /** our own selling prices from the accounting file, in Toman */
+  price_level1: number | null;
+  price_level2: number | null;
+  prices_updated_at?: string | null;
   inactive_at: string | null;
   updated_at?: string;
   /** another active product has the same code */
@@ -29,6 +33,8 @@ export const FIELD_LABELS: Record<ProductField, string> = {
   name: "نام کالا",
   internal_code: "کد کالا",
   sort_order: "ردیف",
+  price_level1: "قیمت سطح ۱",
+  price_level2: "قیمت سطح ۲",
   model: "مدل",
   search_term: "عبارت جستجو",
   brand: "برند",
@@ -48,6 +54,9 @@ export type CleanProduct = {
   search_term: string;
   search_term_auto: string;
   sort_order: number | null;
+  /** Toman; null = no price in the file */
+  price_level1: number | null;
+  price_level2: number | null;
   url_torob: string;
   url_digikala: string;
   url_emalls: string;
@@ -55,8 +64,19 @@ export type CleanProduct = {
 
 const clip = (v: unknown, n: number) => String(v ?? "").replace(/[\s ]+/g, " ").trim().slice(0, n);
 
+export type PriceUnit = "IRR" | "IRT";
+
+/** "16,500,000" / "۱۶٬۵۰۰٬۰۰۰" → Toman (Rial ÷ 10). Empty or 0 → null. */
+export function parsePrice(v: unknown, unit: PriceUnit = "IRR"): number | null {
+  const digits = toLatinDigits(String(v ?? "")).replace(/[,٬،\s]/g, "").replace(/\.0+$/, "");
+  if (!/^\d{1,15}$/.test(digits)) return null;
+  const n = Number(digits);
+  if (!n) return null;
+  return unit === "IRR" ? Math.round(n / 10) : n;
+}
+
 /** Trim, derive model/search term, validate pinned URLs. The code is optional. */
-export function cleanProduct(input: ProductInput): { product: CleanProduct; errors: string[] } {
+export function cleanProduct(input: ProductInput, priceUnit: PriceUnit = "IRR"): { product: CleanProduct; errors: string[] } {
   const errors: string[] = [];
   // keep the code as typed (text), only invisible characters and spaces removed
   const internal_code = normalizeCode(input.internal_code).slice(0, 64);
@@ -75,7 +95,12 @@ export function cleanProduct(input: ProductInput): { product: CleanProduct; erro
     urls[urlField(site)] = u && urlBelongsToSite(site, u) ? u : "";
   }
   return {
-    product: { internal_code, name, brand: clip(input.brand, 80), model, model_auto, search_term, search_term_auto, sort_order, ...urls },
+    product: {
+      internal_code, name, brand: clip(input.brand, 80), model, model_auto, search_term, search_term_auto, sort_order,
+      price_level1: parsePrice(input.price_level1, priceUnit),
+      price_level2: parsePrice(input.price_level2, priceUnit),
+      ...urls,
+    },
     errors,
   };
 }
@@ -85,6 +110,8 @@ export const HEADER_SYNONYMS: Record<ProductField, string[]> = {
   name: ["نام کالا", "نام محصول", "شرح کالا", "نام", "عنوان", "شرح", "name", "product name", "product", "title"],
   internal_code: ["کد کالا", "کدکالا", "کد محصول", "internal code", "internal_code", "کد", "بارکد", "barcode", "code", "sku", "کد داخلی"],
   sort_order: ["ردیف", "row", "شماره ردیف"],
+  price_level1: ["سطح 1", "قیمت سطح 1", "قیمت 1", "قیمت فروش", "price 1"],
+  price_level2: ["سطح 2", "قیمت سطح 2", "قیمت 2", "price 2"],
   model: ["مدل", "model"],
   search_term: ["عبارت جستجو", "کلمه جستجو", "search term", "search_term"],
   brand: ["برند", "مارک", "brand"],
@@ -93,11 +120,17 @@ export const HEADER_SYNONYMS: Record<ProductField, string[]> = {
   url_emalls: ["لینک ایمالز", "url emalls", "url_emalls"],
 };
 
-/** Our accounting export: «نام کالا», «کد کالا», «رديف». Saved per company, editable. */
-export const DEFAULT_IMPORT_FORMAT: Partial<Record<ProductField, string>> = {
+/**
+ * Our accounting export («تابلوي قيمت کالاها»): «سطح 2», «سطح 1», «نام كالا», «كد كالا», «رديف»,
+ * prices in Rial. Saved per company after each import, editable.
+ */
+export const DEFAULT_IMPORT_FORMAT: Partial<Record<ProductField, string>> & { price_unit?: PriceUnit } = {
   name: "نام کالا",
   internal_code: "کد کالا",
   sort_order: "رديف",
+  price_level1: "سطح 1",
+  price_level2: "سطح 2",
+  price_unit: "IRR",
   model: "مدل",
   search_term: "عبارت جستجو",
 };

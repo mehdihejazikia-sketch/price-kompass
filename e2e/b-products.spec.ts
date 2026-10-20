@@ -80,7 +80,7 @@ test("one-click import of the accounting format, search with keyboard, export + 
   const path = await download.path();
   const wb = XLSX.read(readFileSync(path!), { type: "buffer" });
   const rows = XLSX.utils.sheet_to_json<string[]>(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: "" });
-  expect(rows[1].slice(0, 5)).toEqual(["نام کالا", "کد کالا", "رديف", "مدل", "عبارت جستجو"]);
+  expect(rows[1].slice(0, 8)).toEqual(["سطح 2", "", "سطح 1", "نام كالا", "كد كالا", "رديف", "مدل", "عبارت جستجو"]);
   expect(wb.Workbook?.Views?.[0]?.RTL).toBe(true);
 
   await page.goto("/import");

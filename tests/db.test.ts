@@ -73,7 +73,8 @@ describe.skipIf(!available)("database", () => {
   async function runImport(rows: Record<string, string>[], fileName: string, missingMode: "deactivate" | "delete" = "deactivate") {
     const id = await P.startImport(companyId, userId, fileName, missingMode);
     for (let off = 0; off < rows.length; off += 1000) await P.addImportRows(companyId, id, off, rows.slice(off, off + 1000));
-    return { id, result: await P.finishImport(companyId, id, ["name", "internal_code", "sort_order"], rows.length) };
+    const provided = ["name", "internal_code", "sort_order", ...(rows.some((r) => "price_level1" in r) ? ["price_level1", "price_level2"] : [])] as never[];
+    return { id, result: await P.finishImport(companyId, id, provided, rows.length, { priceUnit: "IRR", fileDate: "2026-10-20" }) };
   }
 
   const small = [
@@ -115,6 +116,29 @@ describe.skipIf(!available)("database", () => {
     expect((await P.getProduct(companyId, monitor.id))!.name).toBe(small[0].name);
     expect((await P.searchProducts(companyId, "999"))).toHaveLength(1);
     await expect(P.undoLastImport(companyId, userId, imp2)).rejects.toThrow();
+  });
+
+  it("own prices: imported in Rial, stored in Toman, history kept, undo restores", async () => {
+    const { query } = await import("@/lib/server/db");
+    const withPrices = small.map((r, i) => ({ ...r, price_level1: i === 0 ? "45,000,000" : "", price_level2: i === 0 ? "47,000,000" : "" }));
+    const { result } = await runImport(withPrices, "prices.xlsx");
+    expect(result.price_changed).toBe(1);
+    const monitor = (await P.searchProducts(companyId, "88724"))[0];
+    const p1 = (await P.getProduct(companyId, monitor.id))!;
+    expect([p1.price_level1, p1.price_level2]).toEqual([4500000, 4700000]);
+    expect((await P.lastPriceImport(companyId))?.file_date).toBe("2026-10-20");
+
+    const cheaper = withPrices.map((r, i) => (i === 0 ? { ...r, price_level1: "44,000,000" } : r));
+    const { id: imp, result: r2 } = await runImport(cheaper, "prices2.xlsx");
+    expect(r2.price_changed).toBe(1);
+    expect((await P.getProduct(companyId, monitor.id))!.price_level1).toBe(4400000);
+    const hist = await query<{ price_level1: number; undone: boolean }>("SELECT price_level1, undone FROM system_prices WHERE product_id = $1 ORDER BY id", [monitor.id]);
+    expect(hist.map((h) => h.price_level1)).toEqual([4500000, 4400000]);
+
+    await P.undoLastImport(companyId, userId, imp);
+    expect((await P.getProduct(companyId, monitor.id))!.price_level1).toBe(4500000);
+    const hist2 = await query<{ undone: boolean }>("SELECT undone FROM system_prices WHERE product_id = $1 ORDER BY id", [monitor.id]);
+    expect(hist2.map((h) => h.undone)).toEqual([false, true]);
   });
 
   it.skipIf(!existsSync("samples/products.xlsx"))("real file: 4,525 products, then a re-upload changes nothing (in seconds)", async () => {

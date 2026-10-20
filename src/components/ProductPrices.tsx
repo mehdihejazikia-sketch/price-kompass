@@ -7,14 +7,14 @@ import type { StoredCheck } from "@/lib/server/prices";
 import { PriceChecker } from "./PriceChecker";
 import { PriceChart, type HistoryPoint } from "./PriceChart";
 
-export function ProductPrices(props: { product: CheckProduct; initialLast: StoredCheck[]; initialHistory: HistoryPoint[]; serverSources: ServerSourceInfo[] }) {
+export function ProductPrices(props: { product: CheckProduct; initialLast: StoredCheck[]; initialHistory: HistoryPoint[]; serverSources: ServerSourceInfo[]; ownPrice?: number | null }) {
   const [history, setHistory] = useState(props.initialHistory);
   const reload = useCallback(() => {
     apiFetch<{ history: HistoryPoint[] }>(`/api/products/${props.product.id}/prices`).then((d) => setHistory(d.history)).catch(() => {});
   }, [props.product.id]);
   return (
     <>
-      <PriceChecker product={props.product} initialLast={props.initialLast} serverSources={props.serverSources} onSaved={reload} />
+      <PriceChecker product={props.product} initialLast={props.initialLast} serverSources={props.serverSources} ownPrice={props.ownPrice ?? null} onSaved={reload} />
       <PriceChart history={history} />
     </>
   );

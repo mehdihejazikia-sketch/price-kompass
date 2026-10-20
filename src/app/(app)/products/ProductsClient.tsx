@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/client";
-import { faNum } from "@/lib/format";
+import { faNum, formatToman } from "@/lib/format";
 import { downloadProductsExcel } from "@/lib/exportExcel";
 import type { Product } from "@/lib/products";
 
@@ -86,7 +86,7 @@ export default function ProductsClient({ admin }: { admin: boolean }) {
       <div className="card overflow-x-auto">
         <table className="table">
           <thead>
-            <tr><th>ردیف</th><th>نام کالا</th><th>کد کالا</th><th>مدل</th><th>عبارت جستجو</th><th></th></tr>
+            <tr><th>ردیف</th><th>نام کالا</th><th>کد کالا</th><th>قیمت سطح ۱</th><th>قیمت سطح ۲</th><th>مدل</th><th></th></tr>
           </thead>
           <tbody>
             {data?.rows.map((p) => (
@@ -97,8 +97,9 @@ export default function ProductsClient({ admin }: { admin: boolean }) {
                   {p.internal_code || <span className="badge bg-warn-soft text-warn">بدون کد</span>}
                   {p.dup_code && <span className="badge ms-1 bg-bad-soft text-bad">کد تکراری</span>}
                 </td>
+                <td className="whitespace-nowrap">{p.price_level1 ? formatToman(p.price_level1) : <span className="text-muted">—</span>}</td>
+                <td className="whitespace-nowrap">{p.price_level2 ? formatToman(p.price_level2) : <span className="text-muted">—</span>}</td>
                 <td className="ltr text-start text-muted">{p.model}</td>
-                <td className="ltr text-start text-muted">{p.search_term}</td>
                 <td className="whitespace-nowrap text-end" onClick={(e) => e.stopPropagation()}>
                   {admin && (
                     <>
@@ -112,7 +113,7 @@ export default function ProductsClient({ admin }: { admin: boolean }) {
               </tr>
             ))}
             {data && data.rows.length === 0 && (
-              <tr><td colSpan={6} className="py-10 text-center text-muted">
+              <tr><td colSpan={7} className="py-10 text-center text-muted">
                 {data.counts.all === 0 && filter === "all" && !q ? <>هنوز کالایی ثبت نشده. {admin && <Link className="text-accent underline" href="/import">ورود از اکسل</Link>}</> : "کالایی پیدا نشد."}
               </td></tr>
             )}
