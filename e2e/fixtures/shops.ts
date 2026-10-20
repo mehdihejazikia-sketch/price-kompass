@@ -61,11 +61,17 @@ export const digikalaSearchApi = {
   },
 };
 
+// eMalls results: image link + title link per item, price in a separate box
+// (not inside any link), "تومان" on its own line.
 export const emallsSearch = () =>
-  page(`<ul class="list">
-    <li><a href="/مشخصات_مانیتور-ال-جی~id~777" title="مانیتور ال جی 24MK430H">مانیتور ال جی 24MK430H</a><span>۵٬۱۰۰٬۰۰۰ تومان</span><span>در ۳ فروشگاه</span></li>
-    <li><a href="/مشخصات_مانیتور-جی-پلاس~id~555" title="مانیتور جی پلاس مدل GDM-248CS">مانیتور جی پلاس مدل GDM-248CS</a><span>۴٬۶۲۰٬۰۰۰ تومان</span><span>در ۵ فروشگاه</span></li>
-  </ul>`);
+  page(`<div class="grid">
+    <div class="card"><div class="img"><a href="/مشخصات_مانیتور-ال-جی~id~777"><img alt="مانیتور ال جی 24MK430H"></a></div>
+      <div class="body"><h3><a href="/مشخصات_مانیتور-ال-جی~id~777">مانیتور ال جی 24MK430H</a></h3>
+      <div class="foot"><div class="shops">در ۳ فروشگاه</div><div class="price"><span>۵٬۱۰۰٬۰۰۰</span><br><span>تومان</span></div></div></div></div>
+    <div class="card"><div class="img"><a href="/مشخصات_مانیتور-جی-پلاس~id~555"><img alt="مانیتور جی پلاس GDM-248CS"></a></div>
+      <div class="body"><h3><a href="/مشخصات_مانیتور-جی-پلاس~id~555" title="مانیتور جی پلاس مدل GDM-248CS">مانیتور جی پلاس مدل GDM-248CS</a></h3>
+      <div class="foot"><div class="shops">در ۵ فروشگاه</div><div class="price"><span>۴٬۶۲۰٬۰۰۰</span><br><span>تومان</span></div></div></div></div>
+  </div>`);
 
 export const captcha = () => page(`<h1>لطفاً تأیید کنید که ربات نیستید</h1><div class="captcha">CAPTCHA</div>`);
 

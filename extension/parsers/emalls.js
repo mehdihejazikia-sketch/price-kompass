@@ -4,24 +4,63 @@
 // documented); the results address is then remembered by background.js for next time.
 // Results: item links on the page → the list the page loads from /_Search.ashx.
 (() => {
+  const itemId = (href) => /~id~(\d+)/i.exec(decodeURIComponent(href || ""))?.[1] ?? null;
+
+  /** Lowest "… تومان" (or Rial ÷ 10) in a piece of text. */
+  function priceIn(text, pk) {
+    const re = /([\d۰-۹٠-٩][\d۰-۹٠-٩٬,،.\s]{2,}?)\s*(تومان|ریال)/g;
+    let best = null;
+    let m;
+    while ((m = re.exec(text))) {
+      let v = pk.parseNumber(m[1]);
+      if (!v || v < 1000) continue;
+      if (m[2] === "ریال") v = Math.round(v / 10);
+      if (best === null || v < best) best = v;
+    }
+    return best;
+  }
+
+  /**
+   * One candidate per item (…~id~123). The price is not inside the link, so
+   * walk up from the link to the biggest box that still belongs to this item
+   * only (no links to other items) and read the price from there.
+   */
   function domCandidates(pk) {
+    const byId = new Map();
+    for (const a of document.querySelectorAll('a[href*="~id~" i]')) {
+      const id = itemId(a.getAttribute("href"));
+      if (!id) continue;
+      const item = byId.get(id) ?? { id, href: a.getAttribute("href"), title: "", links: [] };
+      const t = (a.getAttribute("title") || a.innerText || a.querySelector("img")?.getAttribute("alt") || "").trim().split("\n")[0];
+      if (t.length > item.title.length) item.title = t;
+      item.links.push(a);
+      byId.set(id, item);
+      if (byId.size >= 40) break;
+    }
     const out = [];
-    const seen = new Set();
-    for (const a of document.querySelectorAll('a[href*="~id~"], a[href*="~Id~"]')) {
-      const href = a.getAttribute("href");
-      if (seen.has(href)) continue;
-      // the card around the link holds title + price
-      const card = a.closest("li, article, .item, .product, div") || a;
-      const text = card.innerText || "";
-      const m = /([\d۰-۹٬,]{4,})\s*تومان/.exec(text);
-      const title = (a.getAttribute("title") || a.innerText || "").trim().split("\n")[0];
-      if (!title || title.length < 3) continue;
-      seen.add(href);
-      const shops = /(\d+)\s*فروشگاه/.exec(pk.toLatin(text));
-      out.push({ title, price: m ? pk.parseNumber(m[1]) : null, currency: "IRT", url: pk.abs(href), in_stock: !!m && !/ناموجود/.test(text), seller_count: shops ? Number(shops[1]) : null, seller: null });
+    for (const item of byId.values()) {
+      if (item.title.length < 3) continue;
+      let box = item.links[0];
+      for (let el = box.parentElement, depth = 0; el && el !== document.body && depth < 8; el = el.parentElement, depth++) {
+        const ids = new Set([...el.querySelectorAll('a[href*="~id~" i]')].map((x) => itemId(x.getAttribute("href"))));
+        if (ids.size > 1) break;
+        box = el;
+      }
+      const text = box.innerText || "";
+      const price = priceIn(text, pk);
+      const shops = /(\d+)\s*(فروشگاه|فروشنده)/.exec(pk.toLatin(text));
+      out.push({
+        title: item.title,
+        price,
+        currency: "IRT",
+        url: pk.abs(item.href),
+        in_stock: !!price && !/ناموجود|موجود نیست|عدم موجودی/.test(text),
+        seller_count: shops ? Number(shops[1]) : null,
+        seller: null,
+      });
       if (out.length >= 30) break;
     }
-    return out.filter((c) => c.price || out.length < 5);
+    return out;
   }
 
   /** Field names of the ashx response vary; read them generically. */
@@ -78,14 +117,21 @@
       if (!isNotFound() && (await pk.waitFor(() => typeIntoSearchBox(ctx.term), 6000))) return { kind: "navigating" };
       return { kind: "navigating", home: true };
     }
-    const dom = await pk.waitFor(() => { const c = domCandidates(pk); return c.length ? c : null; }, 9000);
-    if (dom) return { kind: "search", candidates: dom, searchUrl: location.href };
+    // prices may appear a moment after the result links: wait for them
+    let dom = await pk.waitFor(() => { const c = domCandidates(pk); return c.some((x) => x.price) ? c : null; }, 9000);
+    if (!dom) dom = domCandidates(pk);
+    if (dom.some((c) => c.price)) return { kind: "search", candidates: dom, searchUrl: location.href };
+    // no prices on the page: the result list the page itself loads, merged with the links found
     try {
       const body = new URLSearchParams({ entekhab: "listitemv2", currenturl: location.href, findstr: ctx.term, pagenum: "1", sort: "", exist: "", shop: "0", minprice: "0", maxprice: "0" });
       const data = await pk.fetchJson("/_Search.ashx", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
       const items = data?.lstsearchresualt || data?.lstsearchresult || [];
-      if (Array.isArray(items) && items.length) return { kind: "search", candidates: items.slice(0, 30).map((it) => fromAshxItem(it, pk)).filter((c) => c.title), searchUrl: location.href };
+      if (Array.isArray(items) && items.length) {
+        const api = items.slice(0, 30).map((it) => fromAshxItem(it, pk)).filter((c) => c.title);
+        return { kind: "search", candidates: api.concat(dom.filter((d) => !api.some((a) => a.url && a.url === d.url))), searchUrl: location.href };
+      }
     } catch {}
+    if (dom.length) return { kind: "search", candidates: dom, searchUrl: location.href };
     if (isNotFound()) return { kind: "navigating", home: true };
     return { kind: "search", candidates: [], searchUrl: location.href };
   }
