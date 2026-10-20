@@ -35,8 +35,11 @@
   same layout. Real file for tests: `samples/products-prices.xlsx` (git-ignored).
 - Fourth site (Oct 2026): hooshmandco.com («هوشمند», site id `hooshmand`, `products.url_hooshmand`,
   migration 005). Its layout was unknown (unreachable from the cloud), so `extension/parsers/hooshmand.js`
-  is a general shop parser: WordPress `/?s=…&post_type=product` or the site's search box, then
-  JSON-LD → WooCommerce cards → links with a price. Search address learned like eMalls
+  is a general shop parser. Real product pages look like `/rapoo-nk8800-keyboard` (OpenCart): search via
+  a search <form>, OpenCart `index.php?route=product/search&search=…`, WordPress `?s=`, or usual
+  addresses tried one per attempt (synthetic Enter keys don't trigger OpenCart's search script);
+  results: JSON-LD → `.product-thumb`/WooCommerce cards → links with a price; pinned links are always
+  read as product pages (price next to the <h1>). Extension 1.3.1. Search address learned like eMalls
   (`searchTpl:hooshmand`). Extension 1.3.0; older extensions get «افزونه را به‌روز کنید» for it.
   Adding another site: `src/lib/sites.ts`, `extension/sites.js` + manifest host permission,
   a parser file, a `url_<site>` column (migration) and the url_* lists in products/importDiff.

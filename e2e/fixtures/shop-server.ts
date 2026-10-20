@@ -6,7 +6,7 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import https from "node:https";
 import os from "node:os";
 import path from "node:path";
-import { captcha, digikalaSearchApi, digikalaShell, emalls404, emallsHome, emallsSearch, hooshmandHome, hooshmandResults, torobProduct, torobSearch } from "./shops";
+import { captcha, digikalaSearchApi, digikalaShell, emalls404, emallsHome, emallsSearch, hooshmandHome, hooshmandProduct, hooshmandResults, torobProduct, torobSearch } from "./shops";
 
 export const SHOP_HOSTS = ["torob.com", "api.torob.com", "www.digikala.com", "api.digikala.com", "emalls.ir", "www.hooshmandco.com"];
 
@@ -40,7 +40,12 @@ export async function startShopServer(port = 443): Promise<ShopServer> {
       if (url.pathname === "/search") return send(emallsSearch());
       return send(emalls404());
     }
-    if (host === "www.hooshmandco.com") return send(url.searchParams.get("s") ? hooshmandResults() : hooshmandHome());
+    if (host === "www.hooshmandco.com") {
+      if (url.pathname === "/") return send(hooshmandHome());
+      if (url.pathname === "/index.php" && url.searchParams.get("route") === "product/search") return send(hooshmandResults());
+      if (url.pathname === "/gplus-gdm-248cs") return send(hooshmandProduct());
+      return send(emalls404());
+    }
     res.writeHead(404);
     res.end();
   });

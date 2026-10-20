@@ -22,8 +22,8 @@ export function searchUrl(site: SiteId, term: string): string {
       // home page; the extension searches with eMalls' own search box
       return "https://emalls.ir/";
     case "hooshmand":
-      // WordPress-style search; the extension itself uses the site's search box
-      return `https://www.hooshmandco.com/?s=${q}`;
+      // OpenCart search (product pages look like /rapoo-nk8800-keyboard)
+      return `https://www.hooshmandco.com/index.php?route=product/search&search=${q}`;
   }
 }
 

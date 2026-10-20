@@ -69,7 +69,7 @@ export async function checkSite(site, product) {
     const tab = await chrome.tabs.create({ url: pageUrl, active: false });
     tabId = tab.id;
     await chrome.tabs.update(tabId, { autoDiscardable: false }).catch(() => {});
-    const parsed = await readTab(tabId, site, { term, model: product.model || "" });
+    const parsed = await readTab(tabId, site, { term, model: product.model || "", pinned: !!pinned });
     if (LEARNED.includes(site) && !pinned) await learnSearchUrl(site, parsed, term);
     if (parsed.error) return { ...base, status: "error", message: `خواندن صفحه ${LABELS[site]} ممکن نشد. (${parsed.error})` };
     if (parsed.blocked) return { ...base, status: "error", message: parsed.blocked };
@@ -169,7 +169,7 @@ async function readTab(tabId, site, ctx) {
       const [res] = await chrome.scripting.executeScript({
         target: { tabId },
         func: (s, c) => globalThis.__pkRun(s, c),
-        args: [site, ctx],
+        args: [site, { ...ctx, attempt }],
       });
       last = res?.result ?? { error: "no result" };
       if (last.kind === "navigating") {

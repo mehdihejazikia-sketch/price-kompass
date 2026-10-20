@@ -57,6 +57,8 @@ test("live check for 88724 (GDM-248CS) on torob, digikala and emalls", async () 
   // hooshmandco.com (WooCommerce): the sale price, the right model
   await expect(page.getByTestId("price-hooshmand")).toHaveText("۴٬۵۵۰٬۰۰۰ تومان", { timeout: 45000 });
   await expect(page.getByTestId("row-hooshmand")).toContainText("GDM-248CS");
+  // OpenCart: the search box has no form, so its standard search address was used
+  expect(shops.opened.some((u) => u.includes("route=product/search"))).toBe(true);
 
   const torob = page.getByTestId("row-torob");
   await expect(torob).toContainText("GDM-248CS"); // found title, the right model (not GDM-278LN)
@@ -81,6 +83,12 @@ test("live check for 88724 (GDM-248CS) on torob, digikala and emalls", async () 
   await expect(page.getByTestId("price-torob")).toHaveText("۴٬۴۹۰٬۰۰۰ تومان", { timeout: 45000 });
   await expect(torob).toContainText("۲ فروشنده");
   expect(shops.opened.some((u) => u.startsWith("https://torob.com/p/abc-123/"))).toBe(true);
+  // Hooshmand: a pinned product page (OpenCart /slug) is read as the product, not as a search
+  const pid = Number(new URL(page.url()).pathname.split("/").pop());
+  await page.request.post(`/api/products/${pid}/pin`, { data: { site: "hooshmand", url: "https://www.hooshmandco.com/gplus-gdm-248cs" } });
+  await page.reload();
+  await page.getByRole("button", { name: "بررسی دوباره" }).click();
+  await expect(page.getByTestId("price-hooshmand")).toHaveText("۴٬۵۰۰٬۰۰۰ تومان", { timeout: 45000 });
   // eMalls: the first check went through its search box; now the learned address is opened directly
   await expect.poll(() => shops.opened.some((u) => u.startsWith("https://emalls.ir/search?q=")), { timeout: 45000 }).toBe(true);
   expect(shops.opened.some((u) => u === "https://emalls.ir/")).toBe(false);
