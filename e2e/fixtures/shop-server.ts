@@ -6,7 +6,7 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import https from "node:https";
 import os from "node:os";
 import path from "node:path";
-import { captcha, digikalaSearchApi, digikalaShell, emallsSearch, torobProduct, torobSearch } from "./shops";
+import { captcha, digikalaSearchApi, digikalaShell, emalls404, emallsHome, emallsSearch, torobProduct, torobSearch } from "./shops";
 
 export const SHOP_HOSTS = ["torob.com", "api.torob.com", "www.digikala.com", "api.digikala.com", "emalls.ir"];
 
@@ -34,7 +34,12 @@ export async function startShopServer(port = 443): Promise<ShopServer> {
     opened.push(url.href);
     if (host === "torob.com") return send(url.pathname.startsWith("/p/") ? torobProduct() : torobSearch(url.searchParams.get("query") ?? ""));
     if (host === "www.digikala.com") return send(digikalaShell());
-    if (host === "emalls.ir") return send(state.emallsBlocked ? captcha() : emallsSearch());
+    if (host === "emalls.ir") {
+      if (state.emallsBlocked) return send(captcha());
+      if (url.pathname === "/") return send(emallsHome());
+      if (url.pathname === "/search") return send(emallsSearch());
+      return send(emalls404());
+    }
     res.writeHead(404);
     res.end();
   });

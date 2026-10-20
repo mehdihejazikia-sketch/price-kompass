@@ -23,3 +23,7 @@
   brand and model; wrong products become «پیدا نشد» with a suggestion. Only exact/pinned
   results count as the price (`CONFIRMED` in `src/lib/server/prices.ts`). Search term default =
   cleaned product name (migration 003). Extension 1.1.0 sends all candidates to the website.
+- eMalls (Oct 2026): the guessed search address 404s. Extension 1.2.0 opens https://emalls.ir/,
+  types into eMalls' own search box, and remembers the results address as a template in
+  `chrome.storage.local` (`emallsSearch`); a 404 clears it. The website's fallback button opens
+  the eMalls home page until the real search address format is known.

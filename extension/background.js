@@ -6,7 +6,7 @@ import { SITES, LABELS, searchUrl, belongsTo } from "./sites.js";
 import { pickBest } from "./match.js";
 
 const VERSION = chrome.runtime.getManifest().version;
-const PAGE_TIMEOUT = 25000;
+const PAGE_TIMEOUT = 35000;
 
 // One check at a time (no bulk scraping); later requests wait their turn.
 let queue = Promise.resolve();
@@ -60,7 +60,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
 export async function checkSite(site, product) {
   const term = String(product.search_term || product.model || product.name || "").trim();
   const pinned = product.urls?.[site] && belongsTo(site, product.urls[site]) ? product.urls[site] : null;
-  const pageUrl = pinned || searchUrl(site, term);
+  const pageUrl = pinned || (await startUrl(site, term));
   const base = { site, page_url: pageUrl, pinned: !!pinned, checked_at: new Date().toISOString() };
   if (!term && !pinned) return { ...base, status: "error", message: "عبارت جستجو برای این کالا خالی است." };
 
@@ -70,6 +70,7 @@ export async function checkSite(site, product) {
     tabId = tab.id;
     await chrome.tabs.update(tabId, { autoDiscardable: false }).catch(() => {});
     const parsed = await readTab(tabId, site, { term, model: product.model || "" });
+    if (site === "emalls" && !pinned) await learnSearchUrl(parsed, term);
     if (parsed.error) return { ...base, status: "error", message: `خواندن صفحه ${LABELS[site]} ممکن نشد. (${parsed.error})` };
     if (parsed.blocked) return { ...base, status: "error", message: parsed.blocked };
     const candidates = parsed.candidates ?? [];
@@ -121,11 +122,44 @@ function waitComplete(tabId, timeout) {
   });
 }
 
+const HOME = { torob: "https://torob.com/", digikala: "https://www.digikala.com/", emalls: "https://emalls.ir/" };
+
+/**
+ * Where a search starts. eMalls' search address isn't documented: the first
+ * search goes through its search box, then the address is remembered as a
+ * template ({ base, sep }) in chrome.storage.
+ */
+async function startUrl(site, term) {
+  if (site !== "emalls") return searchUrl(site, term);
+  const { emallsSearch } = await chrome.storage.local.get("emallsSearch");
+  if (emallsSearch?.template) {
+    const q = term.trim().split(/\s+/).map(encodeURIComponent).join(emallsSearch.sep || "%20");
+    return emallsSearch.template.replace("{q}", q);
+  }
+  return HOME.emalls;
+}
+
+async function learnSearchUrl(parsed, term) {
+  if (parsed?.kind !== "search" || !parsed.searchUrl) return;
+  const url = parsed.searchUrl;
+  const words = term.trim().split(/\s+/).map(encodeURIComponent);
+  for (const sep of ["%20", "+", "-", "_"]) {
+    const enc = words.join(sep);
+    for (const variant of [enc, enc.replace(/%[0-9A-F]{2}/g, (m) => m.toLowerCase())]) {
+      const i = url.indexOf(variant);
+      if (i >= 0) {
+        await chrome.storage.local.set({ emallsSearch: { template: url.slice(0, i) + "{q}" + url.slice(i + variant.length), sep } });
+        return;
+      }
+    }
+  }
+}
+
 /** Inject the parser and run it; retry if the page navigated (bot checks, redirects). */
 async function readTab(tabId, site, ctx) {
   const deadline = Date.now() + PAGE_TIMEOUT;
   let last = { error: "timeout" };
-  for (let attempt = 0; attempt < 3 && Date.now() < deadline; attempt++) {
+  for (let attempt = 0; attempt < 5 && Date.now() < deadline; attempt++) {
     await waitComplete(tabId, Math.max(1000, deadline - Date.now()));
     try {
       await chrome.scripting.executeScript({ target: { tabId }, files: ["parsers/common.js", `parsers/${site}.js`] });
@@ -135,6 +169,16 @@ async function readTab(tabId, site, ctx) {
         args: [site, ctx],
       });
       last = res?.result ?? { error: "no result" };
+      if (last.kind === "navigating") {
+        // the parser typed into the site's search box, or asked to start from the home page
+        if (last.home) {
+          if (site === "emalls") await chrome.storage.local.remove("emallsSearch");
+          await chrome.tabs.update(tabId, { url: HOME[site] });
+        }
+        last = { error: "search did not open" };
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
+      }
       if (!last.error) return last;
     } catch (e) {
       last = { error: String(e?.message || e) };

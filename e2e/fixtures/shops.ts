@@ -68,3 +68,9 @@ export const emallsSearch = () =>
   </ul>`);
 
 export const captcha = () => page(`<h1>لطفاً تأیید کنید که ربات نیستید</h1><div class="captcha">CAPTCHA</div>`);
+
+// eMalls home page with its search box (a GET form, like a real search box)
+export const emallsHome = () =>
+  page(`<header><form action="/search" method="get"><input type="search" name="q" placeholder="جستجو در ایمالز"><button>جستجو</button></form></header><main>پیشنهادهای امروز</main>`);
+
+export const emalls404 = () => page(`<h1>خطای ۴۰۴</h1><p>صفحه مورد نظر پیدا نشد :(</p>`);

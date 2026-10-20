@@ -78,6 +78,9 @@ test("live check for 88724 (GDM-248CS) on torob, digikala and emalls", async () 
   await expect(page.getByTestId("price-torob")).toHaveText("۴٬۴۹۰٬۰۰۰ تومان", { timeout: 45000 });
   await expect(torob).toContainText("۲ فروشنده");
   expect(shops.opened.some((u) => u.startsWith("https://torob.com/p/abc-123/"))).toBe(true);
+  // eMalls: the first check went through its search box; now the learned address is opened directly
+  await expect.poll(() => shops.opened.some((u) => u.startsWith("https://emalls.ir/search?q=")), { timeout: 45000 }).toBe(true);
+  expect(shops.opened.some((u) => u === "https://emalls.ir/")).toBe(false);
   await expect(page.getByTestId("price-emalls")).toBeVisible({ timeout: 45000 });
 
   // last known prices show instantly on the next visit

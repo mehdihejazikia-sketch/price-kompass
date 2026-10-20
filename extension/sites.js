@@ -7,7 +7,7 @@ export function searchUrl(site, term) {
   const q = encodeURIComponent(term.trim());
   if (site === "torob") return `https://torob.com/search/?query=${q}`;
   if (site === "digikala") return `https://www.digikala.com/search/?q=${q}`;
-  return `https://emalls.ir/${encodeURIComponent("لیست-قیمت")}~Search~${encodeURIComponent(term.trim().replace(/\s+/g, " "))}`;
+  return "https://emalls.ir/"; // searched through the site's search box (background.js startUrl)
 }
 
 export function belongsTo(site, url) {

@@ -1,6 +1,8 @@
 // emalls.ir. Prices are shown in Toman.
 // Product page …~id~<n>: JSON-LD Product with AggregateOffer (lowPrice, offerCount) → page text.
-// Search page (لیست-قیمت~Search~…): the result list the page loads from /_Search.ashx → item links on the page.
+// Search: we open the home page and use eMalls' own search box (its address format is not
+// documented); the results address is then remembered by background.js for next time.
+// Results: item links on the page → the list the page loads from /_Search.ashx.
 (() => {
   function domCandidates(pk) {
     const out = [];
@@ -42,16 +44,50 @@
     return { kind: "product", candidates: [] };
   }
 
+  const squash = (v) => String(v ?? "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+  const isNotFound = () => /خطای\s*(۴۰۴|404)|صفحه مورد نظر پیدا نشد/.test(document.body?.innerText ?? "");
+  function onResultsPage(ctx) {
+    let url = location.href;
+    try {
+      url = decodeURIComponent(url);
+    } catch {}
+    return squash(url).includes(squash(ctx.term).slice(0, 14));
+  }
+
+  /** Use eMalls' own search box, like a person: type the term and press Enter. */
+  function typeIntoSearchBox(term) {
+    const input = [...document.querySelectorAll('input[type="search"], input[name*="search" i], input[id*="search" i], input[placeholder*="جستجو"], input[name="q"], input[type="text"]')]
+      .find((el) => el.offsetParent !== null || el.getClientRects().length);
+    if (!input) return false;
+    input.focus();
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
+    setter.call(input, term);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    for (const type of ["keydown", "keypress", "keyup"]) {
+      input.dispatchEvent(new KeyboardEvent(type, { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true }));
+    }
+    const form = input.closest("form");
+    if (form) setTimeout(() => (form.requestSubmit ? form.requestSubmit() : form.submit()), 300);
+    return true;
+  }
+
   async function searchPage(ctx, pk) {
+    if (!onResultsPage(ctx)) {
+      // home page (or a learned address that no longer works): search with the search box
+      if (!isNotFound() && (await pk.waitFor(() => typeIntoSearchBox(ctx.term), 6000))) return { kind: "navigating" };
+      return { kind: "navigating", home: true };
+    }
     const dom = await pk.waitFor(() => { const c = domCandidates(pk); return c.length ? c : null; }, 9000);
-    if (dom) return { kind: "search", candidates: dom };
+    if (dom) return { kind: "search", candidates: dom, searchUrl: location.href };
     try {
       const body = new URLSearchParams({ entekhab: "listitemv2", currenturl: location.href, findstr: ctx.term, pagenum: "1", sort: "", exist: "", shop: "0", minprice: "0", maxprice: "0" });
       const data = await pk.fetchJson("/_Search.ashx", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
       const items = data?.lstsearchresualt || data?.lstsearchresult || [];
-      if (Array.isArray(items)) return { kind: "search", candidates: items.slice(0, 30).map((it) => fromAshxItem(it, pk)).filter((c) => c.title) };
+      if (Array.isArray(items) && items.length) return { kind: "search", candidates: items.slice(0, 30).map((it) => fromAshxItem(it, pk)).filter((c) => c.title), searchUrl: location.href };
     } catch {}
-    return { kind: "search", candidates: [] };
+    if (isNotFound()) return { kind: "navigating", home: true };
+    return { kind: "search", candidates: [], searchUrl: location.href };
   }
 
   globalThis.__pkParsers.emalls = (ctx, pk) => (/~id~/i.test(decodeURIComponent(location.pathname)) ? productPage(ctx, pk) : searchPage(ctx, pk));
