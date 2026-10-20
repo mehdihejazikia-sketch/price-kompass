@@ -49,18 +49,22 @@ test("install page detects the extension", async () => {
 });
 
 test("live check for 88724 (GDM-248CS) on torob, digikala and emalls", async () => {
+  // like the real PC: an old, wrong search address learned by 1.3.x must be dropped
+  const sw = ctx.serviceWorkers()[0];
+  await sw.evaluate(() =>
+    chrome.storage.local.set({ "searchTpl:hooshmand": { template: "https://www.hooshmandco.com/index.php?route=product/search&search={q}", sep: "%20" } }),
+  );
   const page = await openTestProduct();
   // check starts automatically
   await expect(page.getByTestId("price-torob")).toHaveText("۴٬۵۹۰٬۰۰۰ تومان", { timeout: 45000 });
   await expect(page.getByTestId("price-digikala")).toHaveText("۴٬۷۵۰٬۰۰۰ تومان", { timeout: 45000 });
   await expect(page.getByTestId("price-emalls")).toHaveText("۴٬۶۲۰٬۰۰۰ تومان", { timeout: 45000 });
-  // hooshmandco.com (WooCommerce): the sale price, the right model
-  await expect(page.getByTestId("price-hooshmand")).toHaveText("۴٬۵۵۰٬۰۰۰ تومان", { timeout: 45000 });
+  // hooshmandco.com: search-as-you-type list → the right product's page → its (discounted) price
+  await expect(page.getByTestId("price-hooshmand")).toHaveText("۴٬۵۰۰٬۰۰۰ تومان", { timeout: 45000 });
   await expect(page.getByTestId("row-hooshmand")).toContainText("GDM-248CS");
-  // OpenCart: the search box has no form, so its standard search address was used
-  expect(shops.opened.some((u) => u.includes("route=product/search"))).toBe(true);
-  // the full name found nothing there, the second search with the model code did
-  expect(shops.opened.some((u) => u.includes("route=product/search&search=GDM-248CS"))).toBe(true);
+  // the full Persian name found nothing in the list, the model code did; then its page was opened
+  expect(shops.opened.some((u) => u === "https://www.hooshmandco.com/gplus-gdm-248cs")).toBe(true);
+  expect(await sw.evaluate(() => chrome.storage.local.get("searchTpl:hooshmand"))).toEqual({});
 
   const torob = page.getByTestId("row-torob");
   await expect(torob).toContainText("GDM-248CS"); // found title, the right model (not GDM-278LN)

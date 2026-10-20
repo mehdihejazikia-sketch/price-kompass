@@ -111,7 +111,7 @@
   /** Prices shown on the page ("۱۲٬۵۰۰٬۰۰۰ تومان"), to tell Rial from Toman. */
   function visiblePrices() {
     const text = document.body?.innerText ?? "";
-    const re = /([\d۰-۹٠-٩][\d۰-۹٠-٩٬,،.٫٬\s]{2,})\s*(تومان|ریال)/g;
+    const re = /([\d۰-۹٠-٩][\d۰-۹٠-٩٬,،.٫]{2,})\s*(تومان|ریال)/g;
     const out = [];
     let m;
     while ((m = re.exec(text)) && out.length < 300) {

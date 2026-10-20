@@ -1,6 +1,9 @@
-// hooshmandco.com. Product pages look like /rapoo-nk8800-keyboard (OpenCart-style
-// SEO addresses). The parser is general enough for OpenCart, WordPress/WooCommerce
-// and other shops:
+// hooshmandco.com. Product pages look like /rapoo-nk8800-keyboard. The real site
+// searches while you type (a list of products under the search box, no results
+// page; /index.php?route=… is its "پیدا نشد! آدرس مورد نظر شما معتبر نیست" page).
+// Flow: type into the search box → read the product list → background.js opens
+// the best-matching product page → price next to the <h1>. Fallbacks below
+// cover shops with a results page:
 // - search: the shop's search address (OpenCart index.php?route=product/search,
 //   a search <form>, WordPress ?s=), else a list of usual addresses, one per
 //   attempt; the working address is remembered by background.js
@@ -12,7 +15,8 @@
   const SELLER = "هوشمند";
   const squash = (v) => String(v ?? "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
   const bodyText = () => document.body?.innerText ?? "";
-  const isNotFound = () => /(^|\s)(404|۴۰۴)(\s|$)|صفحه (مورد نظر )?(یافت|پیدا) نشد|page not found/i.test((document.title || "") + " " + bodyText().slice(0, 2000));
+  const isNotFound = () =>
+    /(^|\s)(404|۴۰۴)(\s|$)|صفحه (مورد نظر )?(یافت|پیدا) نشد|آدرس مورد نظر (شما )?معتبر نیست|^\s*پیدا نشد!|page not found/i.test((document.title || "") + " " + bodyText().slice(0, 2000));
   const isOpenCart = () =>
     !!document.querySelector('a[href*="route="], link[href*="catalog/view"], script[src*="catalog/view"], img[src*="image/cache"], #search input[name="search"], input[name="search"]');
   const isWordPress = () => !!document.querySelector('link[href*="wp-content"], script[src*="wp-content"], meta[name="generator"][content*="WordPress" i]');
@@ -28,7 +32,7 @@
 
   /** Lowest "… تومان" / "… ریال" in a text. */
   function priceIn(text, pk) {
-    const re = /([\d۰-۹٠-٩][\d۰-۹٠-٩٬,،.\s]{2,}?)\s*(تومان|ریال|﷼)/g;
+    const re = /([\d۰-۹٠-٩][\d۰-۹٠-٩٬,،.]{2,})\s*(تومان|ریال|﷼)/g;
     let best = null;
     let m;
     while ((m = re.exec(text))) {
@@ -150,32 +154,72 @@
     return guesses[(ctx.attempt ?? 0) % guesses.length];
   }
 
+  /**
+   * hooshmandco.com searches while you type: matching products appear in a list
+   * under the search box (title + «مشاهده محصول»), there is no results page.
+   * Type the term like a person and read that list: product titles + addresses.
+   * background.js then opens the best-matching product page and reads its price.
+   */
+  async function dropdownSearch(ctx, pk) {
+    const input = [...document.querySelectorAll('input[type="search"], input[name="search"], input[name="q"], input[name="s"], input[placeholder*="جستجو"], input[type="text"]')]
+      .find((el) => el.offsetParent !== null || el.getClientRects().length);
+    if (!input) return null;
+    const before = new Set([...document.querySelectorAll("a[href]")].map((a) => a.href));
+    input.focus();
+    input.click();
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(input, ctx.term);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent("keyup", { key: "a", bubbles: true }));
+    const isSearchLink = (a) => /جستجو/.test(a.innerText || "") || /[?&](q|s|search|query|keyword)=/i.test(a.href);
+    const found = await pk.waitFor(() => {
+      const fresh = [...document.querySelectorAll("a[href]")].filter((a) => !before.has(a.href) && a.href.startsWith(location.origin));
+      const products = fresh.filter((a) => !isSearchLink(a));
+      return products.length ? { products, search: fresh.find(isSearchLink) ?? null } : null;
+    }, 8000, 250);
+    if (!found) {
+      // no list: maybe the list has a "search for …" link only, or nothing at all
+      const searchLink = [...document.querySelectorAll("a[href]")].find((a) => !before.has(a.href) && isSearchLink(a));
+      return searchLink ? { kind: "navigate", url: searchLink.href } : { kind: "links", candidates: [] };
+    }
+    const seen = new Set();
+    const candidates = [];
+    for (const a of found.products) {
+      const url = a.href.split("#")[0];
+      if (seen.has(url)) continue;
+      seen.add(url);
+      const lines = (a.innerText || a.getAttribute("title") || a.querySelector("img")?.getAttribute("alt") || "")
+        .split("\n").map((t) => t.trim()).filter((t) => t && !/^مشاهده/.test(t));
+      if (!lines.length) continue;
+      const p = priceIn(a.innerText || "", pk);
+      candidates.push({ title: lines[0], price: p?.value ?? null, currency: p?.unit ?? "IRT", url, in_stock: null, seller: SELLER, seller_count: null });
+    }
+    return { kind: "links", candidates };
+  }
+
   async function searchPage(ctx, pk) {
+    if (isNotFound()) return { kind: "navigating", home: true }; // e.g. an old learned address
     if (!onResultsPage(ctx)) {
-      if (isNotFound() && !(ctx.attempt > 0)) return { kind: "navigating", home: true };
+      const r = await dropdownSearch(ctx, pk);
+      if (r?.kind === "links" && r.candidates.length) return r;
+      if (r?.kind === "navigate") {
+        location.assign(r.url);
+        return { kind: "navigating" };
+      }
+      if (r) return { kind: "search", candidates: [] }; // typed, nothing matched
+      // no search box on this page: a usual search address
       location.assign(searchAddress(ctx));
       return { kind: "navigating" };
     }
-    // a search with a single hit may open the product page itself
-    if (!document.querySelector(".product-thumb, .product-layout, .products") && document.querySelector("h1") && pk.productFromJsonLd()) return productPage(ctx, pk);
+    // a results page (a learned search address)
     const found = await pk.waitFor(() => {
-      const ld = pk.findAll(pk.jsonLd(), (o) => pk.isType(o, "Product") && o.offers, 40).map((p) => {
-        const o = [].concat(p.offers)[0] ?? {};
-        return { title: String(p.name ?? ""), price: pk.parseNumber(o.lowPrice ?? o.price), currency: String(o.priceCurrency ?? "").toUpperCase() === "IRR" ? "IRR" : "IRT", url: pk.abs(p.url ?? o.url ?? ""), in_stock: !/OutOfStock/i.test(String(o.availability ?? "")), seller: SELLER, seller_count: null };
-      }).filter((c) => c.title);
-      if (ld.some((c) => c.price)) return ld;
       const c = cards(pk);
       if (c.some((x) => x.price)) return c;
       const l = linkCards(pk);
       return l.length ? l : null;
     }, 9000);
     if (found) return { kind: "search", candidates: found, searchUrl: location.href };
-    if (isNotFound()) {
-      // this address doesn't exist here: try the next usual one
-      location.assign(searchAddress({ ...ctx, attempt: (ctx.attempt ?? 0) + 1 }));
-      return { kind: "navigating" };
-    }
-    return { kind: "search", candidates: cards(pk), searchUrl: location.href };
+    return { kind: "search", candidates: [], searchUrl: location.href };
   }
 
   globalThis.__pkParsers.hooshmand = (ctx, pk) => (ctx.pinned ? productPage(ctx, pk) : searchPage(ctx, pk));

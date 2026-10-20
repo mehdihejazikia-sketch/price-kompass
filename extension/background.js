@@ -89,6 +89,21 @@ export async function checkSite(site, product) {
         }
       }
     }
+    // the site gave only product titles + addresses (a search-as-you-type list):
+    // open the best-matching product page and read the price there
+    if (parsed.kind === "links") {
+      const links = parsed.candidates ?? [];
+      const pick = pickBest(links, product);
+      if (pick && pick.match !== "weak" && pick.url) {
+        await chrome.tabs.update(tabId, { url: pick.url });
+        await new Promise((r) => setTimeout(r, 800));
+        const page = await readTab(tabId, site, { term: usedTerm, model, pinned: true });
+        const c = page.candidates?.[0];
+        parsed = c ? { kind: "search", candidates: [{ ...c, url: pick.url, title: c.title || pick.title }] } : { kind: "search", candidates: links };
+      } else {
+        parsed = { kind: "search", candidates: links };
+      }
+    }
     if (parsed.error) return { ...base, status: "error", message: `خواندن صفحه ${LABELS[site]} ممکن نشد. (${parsed.error})` };
     if (parsed.blocked) return { ...base, status: "error", message: parsed.blocked };
     const candidates = parsed.candidates ?? [];

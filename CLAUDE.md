@@ -48,3 +48,9 @@
   page text, sample links, product/price CSS classes) so the popup test shows what the page looked
   like. Hooshmand: even `index.php?route=product/search&search=NK8800` returned no readable results
   on the real site (Oct 20) — waiting for the user's own search address / debug output.
+- Hooshmand, real behaviour (Oct 20, screenshots): NOT OpenCart. No search results page; typing in the
+  search box shows a product list (title + «مشاهده محصول») under it; unknown addresses show
+  «پیدا نشد! آدرس مورد نظر شما معتبر نیست». Product page: <h1> «کیبورد رپو مدل NK8800», price in a
+  side column «۲,۴۰۰,۰۰۰ تومان» next to the struck old price. Extension 1.5.0: the parser types into
+  the box and returns `kind: "links"`; background.js opens the best-matching product page and reads
+  the price there. Price regexes no longer allow spaces inside numbers (old + new price merged).

@@ -22,8 +22,8 @@ export function searchUrl(site: SiteId, term: string): string {
       // home page; the extension searches with eMalls' own search box
       return "https://emalls.ir/";
     case "hooshmand":
-      // OpenCart search (product pages look like /rapoo-nk8800-keyboard)
-      return `https://www.hooshmandco.com/index.php?route=product/search&search=${q}`;
+      // no search results page: the site searches while you type in its search box
+      return "https://www.hooshmandco.com/";
   }
 }
 

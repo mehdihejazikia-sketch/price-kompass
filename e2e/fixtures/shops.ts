@@ -81,28 +81,40 @@ export const emallsHome = () =>
 
 export const emalls404 = () => page(`<h1>خطای ۴۰۴</h1><p>صفحه مورد نظر پیدا نشد :(</p>`);
 
-// hooshmandco.com: an OpenCart shop. The search box has no <form> (OpenCart's own
-// script builds index.php?route=product/search&search=…); product pages are /<slug>.
+// hooshmandco.com as it really behaves: no results page; typing in the search box
+// shows a list of matching products (title + «مشاهده محصول») under it. Unknown
+// addresses show «پیدا نشد! آدرس مورد نظر شما معتبر نیست». Product pages are /<slug>,
+// the price sits in a side column, apart from the <h1>.
 export const hooshmandHome = () =>
-  page(`<div id="search"><input type="text" name="search" placeholder="جستجو"><button type="button">🔍</button></div>
-    <a href="/index.php?route=account/login">ورود</a><img src="/image/cache/catalog/logo.png" alt="">`,
-    `<link href="/catalog/view/theme/default/stylesheet/stylesheet.css" rel="stylesheet">`);
-
-export const hooshmandResults = () =>
-  page(`<div class="row">
-    <div class="product-layout"><div class="product-thumb"><div class="image"><a href="https://www.hooshmandco.com/gplus-gdm-278ln"><img alt="مانیتور جی پلاس GDM-278LN"></a></div>
-      <div class="caption"><h4><a href="https://www.hooshmandco.com/gplus-gdm-278ln">مانیتور جی پلاس GDM-278LN</a></h4><p class="price">۷٬۱۰۰٬۰۰۰ تومان</p></div></div></div>
-    <div class="product-layout"><div class="product-thumb"><div class="image"><a href="https://www.hooshmandco.com/gplus-gdm-248cs"><img alt="مانیتور جی پلاس GDM-248CS"></a></div>
-      <div class="caption"><h4><a href="https://www.hooshmandco.com/gplus-gdm-248cs">مانیتور 24 اینچ جی پلاس مدل GDM-248CS</a></h4>
-      <p class="price"><span class="price-new">۴٬۵۵۰٬۰۰۰ تومان</span> <span class="price-old">۴٬۹۰۰٬۰۰۰ تومان</span></p></div></div></div>
-  </div>`, `<link href="/catalog/view/theme/default/stylesheet/stylesheet.css" rel="stylesheet">`);
+  page(`<header><div class="search-box"><input type="text" placeholder="جستجو"><div class="dropdown"></div></div></header>
+  <main><h2>تخفیف ویژه سال</h2></main>
+  <script>
+    const PRODUCTS = [
+      { slug: "gplus-gdm-278ln", title: "مانیتور جی پلاس مدل GDM-278LN" },
+      { slug: "gplus-gdm-248cs", title: "مانیتور 24 اینچ جی پلاس مدل GDM-248CS" },
+    ];
+    const input = document.querySelector("input"), box = document.querySelector(".dropdown");
+    input.addEventListener("input", () => {
+      const q = input.value.trim().toLowerCase();
+      setTimeout(() => {
+        // like the real shop: every word must be in the title (the Persian full name finds nothing)
+        const hits = PRODUCTS.filter((p) => q.split(/\s+/).every((w) => p.title.toLowerCase().includes(w)));
+        box.innerHTML = '<a href="/search?q=' + encodeURIComponent(q) + '">جستجوی "' + q + '"</a>' +
+          hits.map((p) => '<a href="/' + p.slug + '"><img alt=""><div>' + p.title + '</div><small>مشاهده محصول</small></a>').join("");
+      }, 400);
+    });
+  </script>`);
 
 export const hooshmandProduct = () =>
-  page(`<div id="product-product"><div class="row"><div class="col-sm-8"><img alt=""></div>
-    <div class="col-sm-4"><h1>مانیتور 24 اینچ جی پلاس مدل GDM-248CS</h1>
-      <ul class="list-unstyled"><li>وضعیت: موجود</li></ul>
-      <ul class="list-unstyled"><li><h2>۴٬۵۰۰٬۰۰۰ تومان</h2></li></ul></div></div>
-    <h3>محصولات مرتبط</h3><div class="product-thumb"><div class="caption"><h4><a href="/cable">کابل HDMI</a></h4><p class="price">۲۵۰٬۰۰۰ تومان</p></div></div></div>`);
+  page(`<nav><a href="/">خانه</a> › <a href="/cat/monitor">مانیتور</a></nav>
+  <div class="row">
+    <div class="gallery"><img alt=""></div>
+    <div class="info"><h1>مانیتور 24 اینچ جی پلاس مدل GDM-248CS</h1><div>GPLUS GDM-248CS</div><div>وزن ۹۸۰ گرم</div></div>
+    <aside class="buy"><div>خرید آسان</div><div><span>۱۸%</span> <s>۴٬۹۰۰٬۰۰۰</s> <b>۴٬۵۰۰٬۰۰۰</b> تومان</div><button>افزودن به سبد خرید</button></aside>
+  </div>
+  <section><h3>محصولات مرتبط</h3><a href="/cable">کابل HDMI</a> <span>۲۵۰٬۰۰۰ تومان</span></section>`);
+
+export const hooshmandNotFound = () => page(`<div>پیدا نشد! آدرس مورد نظر شما معتبر نیست <a href="/">بازگشت</a></div>`);
 
 // OpenCart search with no hits (OpenCart needs every word of the search in the name)
 export const hooshmandNoResults = () =>

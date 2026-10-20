@@ -6,7 +6,7 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import https from "node:https";
 import os from "node:os";
 import path from "node:path";
-import { captcha, digikalaSearchApi, digikalaShell, emalls404, emallsHome, emallsSearch, hooshmandHome, hooshmandNoResults, hooshmandProduct, hooshmandResults, torobProduct, torobSearch } from "./shops";
+import { captcha, digikalaSearchApi, digikalaShell, emalls404, emallsHome, emallsSearch, hooshmandHome, hooshmandNotFound, hooshmandProduct, torobProduct, torobSearch } from "./shops";
 
 export const SHOP_HOSTS = ["torob.com", "api.torob.com", "www.digikala.com", "api.digikala.com", "emalls.ir", "www.hooshmandco.com"];
 
@@ -42,13 +42,8 @@ export async function startShopServer(port = 443): Promise<ShopServer> {
     }
     if (host === "www.hooshmandco.com") {
       if (url.pathname === "/") return send(hooshmandHome());
-      if (url.pathname === "/index.php" && url.searchParams.get("route") === "product/search") {
-        // like the real shop: the full Persian name finds nothing, the model code alone does
-        const q = url.searchParams.get("search") ?? "";
-        return send(/[\u0600-\u06FF]/.test(q) ? hooshmandNoResults() : hooshmandResults());
-      }
       if (url.pathname === "/gplus-gdm-248cs") return send(hooshmandProduct());
-      return send(emalls404());
+      return send(hooshmandNotFound());
     }
     res.writeHead(404);
     res.end();
