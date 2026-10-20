@@ -54,3 +54,9 @@
   side column «۲,۴۰۰,۰۰۰ تومان» next to the struck old price. Extension 1.5.0: the parser types into
   the box and returns `kind: "links"`; background.js opens the best-matching product page and reads
   the price there. Price regexes no longer allow spaces inside numbers (old + new price merged).
+- Extension 1.6.0 (Hooshmand, Portal site builder — `meta generator="Portal Site Builder"`): typing uses
+  focus + click (search overlays) + `document.execCommand("insertText")`; list entries are recognised as
+  NEW elements by identity (the same products are linked on the home page), with «مشاهده محصول» as the
+  marker; entries without an address are opened by clicking (`__pkClickItem`). Product price: the box
+  around «افزودن به سبد», then near the <h1>. Learned search addresses only after real results.
+  Debug snapshot now has `steps` and `requests` (the page's fetch/XHR URLs, e.g. its search API).

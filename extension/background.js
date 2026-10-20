@@ -93,15 +93,25 @@ export async function checkSite(site, product) {
     // open the best-matching product page and read the price there
     if (parsed.kind === "links") {
       const links = parsed.candidates ?? [];
+      const listDebug = parsed.debug;
       const pick = pickBest(links, product);
-      if (pick && pick.match !== "weak" && pick.url) {
-        await chrome.tabs.update(tabId, { url: pick.url });
-        await new Promise((r) => setTimeout(r, 800));
+      if (pick && pick.match !== "weak" && (pick.url || pick.index !== undefined)) {
+        const before = (await chrome.tabs.get(tabId)).url;
+        if (pick.url) await chrome.tabs.update(tabId, { url: pick.url });
+        else {
+          await chrome.scripting.executeScript({ target: { tabId }, func: (i) => globalThis.__pkClickItem?.(i), args: [pick.index] });
+          // a click in a single-page site changes the address without a full reload
+          for (let t = 0; t < 40 && (await chrome.tabs.get(tabId)).url === before; t++) await new Promise((r) => setTimeout(r, 200));
+        }
+        await new Promise((r) => setTimeout(r, 1200));
         const page = await readTab(tabId, site, { term: usedTerm, model, pinned: true });
         const c = page.candidates?.[0];
-        parsed = c ? { kind: "search", candidates: [{ ...c, url: pick.url, title: c.title || pick.title }] } : { kind: "search", candidates: links };
+        const url = (await chrome.tabs.get(tabId)).url;
+        parsed = c
+          ? { kind: "search", candidates: [{ ...c, url: pick.url || url, title: c.title || pick.title }], debug: c.price ? undefined : page.debug }
+          : { kind: "search", candidates: links, debug: page.debug ?? listDebug };
       } else {
-        parsed = { kind: "search", candidates: links };
+        parsed = { kind: "search", candidates: links, debug: listDebug };
       }
     }
     if (parsed.error) return { ...base, status: "error", message: `خواندن صفحه ${LABELS[site]} ممکن نشد. (${parsed.error})` };
@@ -120,6 +130,7 @@ export async function checkSite(site, product) {
       ...base,
       status: price_toman ? "ok" : "not_found",
       message: price_toman ? null : "کالا پیدا شد ولی قیمت ندارد (احتمالاً ناموجود).",
+      debug: price_toman ? undefined : parsed.debug,
       title: best.title,
       price: best.price,
       currency,
@@ -178,7 +189,8 @@ async function startUrl(site, term) {
 }
 
 async function learnSearchUrl(site, parsed, term) {
-  if (parsed?.kind !== "search" || !parsed.searchUrl) return;
+  // only an address that really showed results is remembered
+  if (parsed?.kind !== "search" || !parsed.searchUrl || !parsed.candidates?.length) return;
   const url = parsed.searchUrl;
   const words = term.trim().split(/\s+/).map(encodeURIComponent);
   for (const sep of ["%20", "+", "-", "_"]) {

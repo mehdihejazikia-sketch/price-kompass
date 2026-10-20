@@ -170,6 +170,9 @@
       classes: Object.entries(classes).sort((a, b) => b[1] - a[1]).slice(0, 25).map(([c, n]) => `${c}:${n}`).join(" "),
       generator: document.querySelector('meta[name="generator"]')?.getAttribute("content") ?? null,
       prices: visiblePrices().slice(0, 5),
+      steps: globalThis.__pkSteps ?? [],
+      // requests the page made in the background (e.g. a search-as-you-type API)
+      requests: performance.getEntriesByType("resource").filter((e) => ["fetch", "xmlhttprequest"].includes(e.initiatorType)).slice(-8).map((e) => e.name.slice(0, 200)),
     };
   }
 
@@ -185,6 +188,7 @@
       if ((!res || !res.candidates?.length) && blockedReason()) return { blocked: blockedReason(), kind: res?.kind ?? "unknown", candidates: [] };
       // nothing found: report what the page looked like, for fixing the parser remotely
       if (res && res.kind !== "navigating" && !res.candidates?.length) res.debug = pageSnapshot();
+      else if (res && res.kind === "links") res.debug = { steps: globalThis.__pkSteps ?? [] };
       return res;
     } catch (e) {
       return { error: String(e?.message || e), candidates: [] };

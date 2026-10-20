@@ -123,8 +123,17 @@
       const cur = document.querySelector('meta[property="product:price:currency"], meta[property="og:price:currency"], [itemprop="priceCurrency"]');
       price = { value: metaVal, unit: pk.reconcile(metaVal, cur?.getAttribute("content") || "IRT") };
     }
-    // the price box closest to the <h1>: walk up from the title until a price shows up
+    // the buy box: walk up from the «افزودن به سبد» button until a price shows up
+    // (on hooshmandco.com the price sits there, apart from the <h1>; related products further down)
     let scope = h1;
+    const buy = [...document.querySelectorAll("button, a, [role=button]")].find(
+      (b) => /افزودن به سبد|خرید/.test(b.innerText || "") && !b.closest("a[href] a, .product-thumb, .card-section-scroll-area") && visible(b),
+    );
+    for (let el = buy?.parentElement, d = 0; !price && el && el !== document.body && d < 5; el = el.parentElement, d++) {
+      price = priceIn(el.innerText || "", pk);
+      if (price) scope = el;
+    }
+    // else the price closest to the <h1>
     for (let el = h1?.parentElement, d = 0; !price && el && el !== document.body && d < 6; el = el.parentElement, d++) {
       const box = el.querySelector(".price-new, .price, .product-price, #product .list-unstyled h2") ?? null;
       price = box ? priceOfBox(box, pk) : priceIn(el.innerText || "", pk);
@@ -154,48 +163,117 @@
     return guesses[(ctx.attempt ?? 0) % guesses.length];
   }
 
-  /**
-   * hooshmandco.com searches while you type: matching products appear in a list
-   * under the search box (title + «مشاهده محصول»), there is no results page.
-   * Type the term like a person and read that list: product titles + addresses.
-   * background.js then opens the best-matching product page and reads its price.
-   */
-  async function dropdownSearch(ctx, pk) {
-    const input = [...document.querySelectorAll('input[type="search"], input[name="search"], input[name="q"], input[name="s"], input[placeholder*="جستجو"], input[type="text"]')]
-      .find((el) => el.offsetParent !== null || el.getClientRects().length);
+  const visible = (el) => !!el && (el.offsetParent !== null || el.getClientRects().length > 0);
+  const steps = (globalThis.__pkSteps = []);
+  const step = (t) => steps.push(t);
+  const SEARCH_INPUT = 'input[type="search"], input[name="search"], input[name="q"], input[name="s"], input[placeholder*="جستجو"], input[placeholder*="جست"], input[type="text"]';
+  const findInput = () => [...document.querySelectorAll(SEARCH_INPUT)].find(visible) ?? null;
+
+  /** Type like a person: click the box (it may open a search overlay), then insert the text. */
+  async function typeLikeAPerson(term, pk) {
+    let input = findInput();
     if (!input) return null;
-    const before = new Set([...document.querySelectorAll("a[href]")].map((a) => a.href));
+    input.scrollIntoView({ block: "center" });
     input.focus();
     input.click();
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(input, ctx.term);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await pk.sleep(400);
+    const active = document.activeElement;
+    if (active instanceof HTMLInputElement && active !== input && visible(active)) input = active;
+    else {
+      const again = findInput();
+      if (again && again !== input) input = again;
+    }
+    input.focus();
+    input.select?.();
+    let how = "execCommand";
+    let ok = false;
+    try {
+      ok = document.execCommand("insertText", false, term);
+    } catch {}
+    if (!ok || input.value !== term) {
+      how = "setter";
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(input, term);
+      input.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: term }));
+    }
     input.dispatchEvent(new Event("change", { bubbles: true }));
-    input.dispatchEvent(new KeyboardEvent("keyup", { key: "a", bubbles: true }));
-    const isSearchLink = (a) => /جستجو/.test(a.innerText || "") || /[?&](q|s|search|query|keyword)=/i.test(a.href);
+    input.dispatchEvent(new KeyboardEvent("keyup", { key: term.slice(-1), bubbles: true }));
+    step(`input placeholder="${input.placeholder}" typed via ${how}, value="${input.value}"`);
+    return input;
+  }
+
+  /**
+   * hooshmandco.com searches while you type: matching products appear in a list
+   * under the search box (title + «مشاهده محصول»). The list items may be plain
+   * links or elements that only react to a click, and the same products may also
+   * be on the page already, so new elements are recognised by identity, not by address.
+   * Returns { kind: "links", candidates: [{ title, url | index }] } — background.js
+   * picks the best one and opens it (by address, or by clicking item `index`).
+   */
+  async function dropdownSearch(ctx, pk) {
+    const before = new WeakSet(document.querySelectorAll("*"));
+    const input = await typeLikeAPerson(ctx.term, pk);
+    if (!input) {
+      step("no search box found");
+      return null;
+    }
+    const q = squash(pk.toLatin(ctx.term));
+    const isNew = (el) => !before.has(el) && visible(el);
+    const lines = (el) => (el.innerText || "").split("\n").map((t) => t.trim()).filter(Boolean);
     const found = await pk.waitFor(() => {
-      const fresh = [...document.querySelectorAll("a[href]")].filter((a) => !before.has(a.href) && a.href.startsWith(location.origin));
-      const products = fresh.filter((a) => !isSearchLink(a));
-      return products.length ? { products, search: fresh.find(isSearchLink) ?? null } : null;
-    }, 8000, 250);
+      const fresh = [...document.querySelectorAll("body *")].filter(isNew);
+      if (!fresh.length) return null;
+      // the "search for «…»" entry
+      const searchEl = fresh.find((el) => /^جستجو/.test((el.innerText || "").trim()) && squash(pk.toLatin(el.innerText)).includes(q.slice(0, 10)) && lines(el).length <= 2);
+      // product entries: an element holding «مشاهده محصول» plus a title, or a new product link
+      const items = [];
+      const add = (el) => {
+        if (!el || items.some((x) => x === el || x.contains(el) || el.contains(x))) return;
+        if (searchEl && (el === searchEl || el.contains(searchEl) || searchEl.contains(el))) return;
+        items.push(el);
+      };
+      for (const leaf of fresh.filter((el) => /^مشاهده/.test((el.innerText || "").trim()) && lines(el).length === 1)) {
+        let el = leaf;
+        for (let d = 0; el && d < 5 && lines(el).filter((l) => !/^مشاهده/.test(l)).length === 0; d++) el = el.parentElement;
+        add(el?.closest("a[href]") ?? el);
+      }
+      if (!items.length) {
+        for (const a of fresh.filter((el) => el.tagName === "A" && el.getAttribute("href") && !/^(#|javascript)/.test(el.getAttribute("href")))) {
+          if (lines(a).length && !/^جستجو/.test(lines(a)[0])) add(a);
+        }
+      }
+      return items.length || searchEl ? { items, searchEl, fresh: fresh.length } : null;
+    }, 9000, 250);
     if (!found) {
-      // no list: maybe the list has a "search for …" link only, or nothing at all
-      const searchLink = [...document.querySelectorAll("a[href]")].find((a) => !before.has(a.href) && isSearchLink(a));
-      return searchLink ? { kind: "navigate", url: searchLink.href } : { kind: "links", candidates: [] };
+      step("no list appeared under the search box within 9 s");
+      return { kind: "links", candidates: [] };
     }
-    const seen = new Set();
-    const candidates = [];
-    for (const a of found.products) {
-      const url = a.href.split("#")[0];
-      if (seen.has(url)) continue;
-      seen.add(url);
-      const lines = (a.innerText || a.getAttribute("title") || a.querySelector("img")?.getAttribute("alt") || "")
-        .split("\n").map((t) => t.trim()).filter((t) => t && !/^مشاهده/.test(t));
-      if (!lines.length) continue;
-      const p = priceIn(a.innerText || "", pk);
-      candidates.push({ title: lines[0], price: p?.value ?? null, currency: p?.unit ?? "IRT", url, in_stock: null, seller: SELLER, seller_count: null });
+    step(`list: ${found.items.length} products, search entry: ${found.searchEl ? "yes" : "no"}, new elements: ${found.fresh}`);
+    if (!found.items.length && found.searchEl) {
+      const a = found.searchEl.closest("a[href]");
+      if (a) location.assign(a.href);
+      else found.searchEl.click();
+      return { kind: "navigating" };
     }
+    globalThis.__pkItems = found.items;
+    const candidates = found.items.map((el, index) => {
+      const a = el.closest("a[href]") ?? el.querySelector("a[href]");
+      const title = lines(el).filter((l) => !/^مشاهده/.test(l))[0] ?? "";
+      const p = priceIn(el.innerText || "", pk);
+      return { title, price: p?.value ?? null, currency: p?.unit ?? "IRT", url: a ? a.href.split("#")[0] : null, index, in_stock: null, seller: SELLER, seller_count: null };
+    }).filter((c) => c.title);
+    step(`titles: ${candidates.map((c) => c.title).slice(0, 5).join(" | ")}`);
     return { kind: "links", candidates };
   }
+
+  /** Called by background.js: click list item i (when it has no address). */
+  globalThis.__pkClickItem = (i) => {
+    const el = globalThis.__pkItems?.[i];
+    if (!el) return false;
+    const target = el.closest("a, button, [role=option], li") ?? el;
+    for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup"]) target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+    target.click();
+    return true;
+  };
 
   async function searchPage(ctx, pk) {
     if (isNotFound()) return { kind: "navigating", home: true }; // e.g. an old learned address
@@ -206,7 +284,7 @@
         location.assign(r.url);
         return { kind: "navigating" };
       }
-      if (r) return { kind: "search", candidates: [] }; // typed, nothing matched
+      if (r) return { kind: "search", candidates: [] }; // typed, nothing matched (debug added by common.js)
       // no search box on this page: a usual search address
       location.assign(searchAddress(ctx));
       return { kind: "navigating" };

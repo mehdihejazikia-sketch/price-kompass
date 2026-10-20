@@ -81,38 +81,46 @@ export const emallsHome = () =>
 
 export const emalls404 = () => page(`<h1>خطای ۴۰۴</h1><p>صفحه مورد نظر پیدا نشد :(</p>`);
 
-// hooshmandco.com as it really behaves: no results page; typing in the search box
-// shows a list of matching products (title + «مشاهده محصول») under it. Unknown
-// addresses show «پیدا نشد! آدرس مورد نظر شما معتبر نیست». Product pages are /<slug>,
-// the price sits in a side column, apart from the <h1>.
+// hooshmandco.com (Portal site builder) as it behaves: no results page; clicking the
+// header search box opens an overlay with the real input; typing shows a list of
+// products (title + «مشاهده محصول») that are NOT links (they react to a click), and
+// the same product is already linked on the home page. Unknown addresses show
+// «پیدا نشد! آدرس مورد نظر شما معتبر نیست». Product pages are /<slug>; the price sits in
+// a buy box next to «افزودن به سبد خرید», cheaper related products below.
 export const hooshmandHome = () =>
-  page(`<header><div class="search-box"><input type="text" placeholder="جستجو"><div class="dropdown"></div></div></header>
-  <main><h2>تخفیف ویژه سال</h2></main>
+  page(`<header><input class="fake" placeholder="جستجو" readonly></header>
+  <div class="overlay" hidden><input class="real" type="text" placeholder="جستجو در محصولات"><div class="list"></div></div>
+  <main><h2>جدیدترین محصولات</h2>
+    <a class="card" href="/gplus-gdm-248cs">جدید مانیتور • GPLUS مانیتور 24 اینچ جی پلاس مدل GDM-248CS ۴۸٬۰۰۰٬۰۰۰ تومان</a></main>
   <script>
     const PRODUCTS = [
       { slug: "gplus-gdm-278ln", title: "مانیتور جی پلاس مدل GDM-278LN" },
       { slug: "gplus-gdm-248cs", title: "مانیتور 24 اینچ جی پلاس مدل GDM-248CS" },
     ];
-    const input = document.querySelector("input"), box = document.querySelector(".dropdown");
-    input.addEventListener("input", () => {
-      const q = input.value.trim().toLowerCase();
+    const overlay = document.querySelector(".overlay"), real = document.querySelector(".real"), list = document.querySelector(".list");
+    document.querySelector(".fake").addEventListener("click", () => { overlay.hidden = false; real.focus(); });
+    real.addEventListener("input", () => {
+      const q = real.value.trim().toLowerCase();
       setTimeout(() => {
         // like the real shop: every word must be in the title (the Persian full name finds nothing)
         const hits = PRODUCTS.filter((p) => q.split(/\s+/).every((w) => p.title.toLowerCase().includes(w)));
-        box.innerHTML = '<a href="/search?q=' + encodeURIComponent(q) + '">جستجوی "' + q + '"</a>' +
-          hits.map((p) => '<a href="/' + p.slug + '"><img alt=""><div>' + p.title + '</div><small>مشاهده محصول</small></a>').join("");
+        list.innerHTML = '<div class="row search">جستجوی "' + q + '"</div>' +
+          hits.map((p) => '<div class="row item" data-slug="' + p.slug + '"><img alt=""><div><div>' + p.title + '</div><span>مشاهده محصول</span></div></div>').join("");
+        list.querySelectorAll(".item").forEach((el) => el.addEventListener("click", () => { location.href = "/" + el.dataset.slug; }));
       }, 400);
     });
   </script>`);
 
 export const hooshmandProduct = () =>
   page(`<nav><a href="/">خانه</a> › <a href="/cat/monitor">مانیتور</a></nav>
-  <div class="row">
-    <div class="gallery"><img alt=""></div>
-    <div class="info"><h1>مانیتور 24 اینچ جی پلاس مدل GDM-248CS</h1><div>GPLUS GDM-248CS</div><div>وزن ۹۸۰ گرم</div></div>
-    <aside class="buy"><div>خرید آسان</div><div><span>۱۸%</span> <s>۴٬۹۰۰٬۰۰۰</s> <b>۴٬۵۰۰٬۰۰۰</b> تومان</div><button>افزودن به سبد خرید</button></aside>
-  </div>
-  <section><h3>محصولات مرتبط</h3><a href="/cable">کابل HDMI</a> <span>۲۵۰٬۰۰۰ تومان</span></section>`);
+  <main>
+    <div class="row">
+      <div class="gallery"><img alt=""></div>
+      <div class="info"><h1>مانیتور 24 اینچ جی پلاس مدل GDM-248CS</h1><div>GPLUS GDM-248CS</div><div>وزن ۹۸۰ گرم</div></div>
+      <aside class="buy"><div>خرید آسان</div><div><span>۱۸%</span> <s>۴٬۹۰۰٬۰۰۰</s> <b>۴٬۵۰۰٬۰۰۰</b> تومان</div><button>افزودن به سبد خرید</button></aside>
+    </div>
+    <section><h3>محصولات مرتبط</h3><a href="/cable">کابل HDMI <span>۲۵۰٬۰۰۰ تومان</span></a></section>
+  </main>`);
 
 export const hooshmandNotFound = () => page(`<div>پیدا نشد! آدرس مورد نظر شما معتبر نیست <a href="/">بازگشت</a></div>`);
 
