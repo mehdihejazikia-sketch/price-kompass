@@ -70,7 +70,7 @@ export async function checkSite(site, product) {
     tabId = tab.id;
     await chrome.tabs.update(tabId, { autoDiscardable: false }).catch(() => {});
     const parsed = await readTab(tabId, site, { term, model: product.model || "" });
-    if (site === "emalls" && !pinned) await learnSearchUrl(parsed, term);
+    if (LEARNED.includes(site) && !pinned) await learnSearchUrl(site, parsed, term);
     if (parsed.error) return { ...base, status: "error", message: `خواندن صفحه ${LABELS[site]} ممکن نشد. (${parsed.error})` };
     if (parsed.blocked) return { ...base, status: "error", message: parsed.blocked };
     const candidates = parsed.candidates ?? [];
@@ -122,7 +122,10 @@ function waitComplete(tabId, timeout) {
   });
 }
 
-const HOME = { torob: "https://torob.com/", digikala: "https://www.digikala.com/", emalls: "https://emalls.ir/" };
+const HOME = { torob: "https://torob.com/", digikala: "https://www.digikala.com/", emalls: "https://emalls.ir/", hooshmand: "https://www.hooshmandco.com/" };
+// sites whose search address is learned (first search through their search box)
+const LEARNED = ["emalls", "hooshmand"];
+const tplKey = (site) => (site === "emalls" ? "emallsSearch" : `searchTpl:${site}`);
 
 /**
  * Where a search starts. eMalls' search address isn't documented: the first
@@ -130,16 +133,16 @@ const HOME = { torob: "https://torob.com/", digikala: "https://www.digikala.com/
  * template ({ base, sep }) in chrome.storage.
  */
 async function startUrl(site, term) {
-  if (site !== "emalls") return searchUrl(site, term);
-  const { emallsSearch } = await chrome.storage.local.get("emallsSearch");
-  if (emallsSearch?.template) {
-    const q = term.trim().split(/\s+/).map(encodeURIComponent).join(emallsSearch.sep || "%20");
-    return emallsSearch.template.replace("{q}", q);
+  if (!LEARNED.includes(site)) return searchUrl(site, term);
+  const saved = (await chrome.storage.local.get(tplKey(site)))[tplKey(site)];
+  if (saved?.template) {
+    const q = term.trim().split(/\s+/).map(encodeURIComponent).join(saved.sep || "%20");
+    return saved.template.replace("{q}", q);
   }
-  return HOME.emalls;
+  return HOME[site];
 }
 
-async function learnSearchUrl(parsed, term) {
+async function learnSearchUrl(site, parsed, term) {
   if (parsed?.kind !== "search" || !parsed.searchUrl) return;
   const url = parsed.searchUrl;
   const words = term.trim().split(/\s+/).map(encodeURIComponent);
@@ -148,7 +151,7 @@ async function learnSearchUrl(parsed, term) {
     for (const variant of [enc, enc.replace(/%[0-9A-F]{2}/g, (m) => m.toLowerCase())]) {
       const i = url.indexOf(variant);
       if (i >= 0) {
-        await chrome.storage.local.set({ emallsSearch: { template: url.slice(0, i) + "{q}" + url.slice(i + variant.length), sep } });
+        await chrome.storage.local.set({ [tplKey(site)]: { template: url.slice(0, i) + "{q}" + url.slice(i + variant.length), sep } });
         return;
       }
     }
@@ -172,7 +175,7 @@ async function readTab(tabId, site, ctx) {
       if (last.kind === "navigating") {
         // the parser typed into the site's search box, or asked to start from the home page
         if (last.home) {
-          if (site === "emalls") await chrome.storage.local.remove("emallsSearch");
+          if (LEARNED.includes(site)) await chrome.storage.local.remove(tplKey(site));
           await chrome.tabs.update(tabId, { url: HOME[site] });
         }
         last = { error: "search did not open" };

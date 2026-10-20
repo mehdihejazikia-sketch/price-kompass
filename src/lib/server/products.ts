@@ -6,7 +6,7 @@ import type { ImportFormat } from "@/lib/sheet";
 import { BadRequest } from "./api";
 import { one, query, tx } from "./db";
 
-const COLS = `id, internal_code, name, brand, model, search_term, url_torob, url_digikala, url_emalls, sort_order, price_level1, price_level2, prices_updated_at, inactive_at, updated_at`;
+const COLS = `id, internal_code, name, brand, model, search_term, url_torob, url_digikala, url_emalls, url_hooshmand, sort_order, price_level1, price_level2, prices_updated_at, inactive_at, updated_at`;
 const DUP = `(code_norm <> '' AND EXISTS (SELECT 1 FROM products d WHERE d.company_id = p.company_id AND d.code_norm = p.code_norm
               AND d.id <> p.id AND d.deleted_at IS NULL AND d.inactive_at IS NULL)) AS dup_code`;
 
@@ -115,27 +115,27 @@ export async function saveProduct(companyId: number, input: ProductInput, id?: n
   const model = product.model || product.model_auto;
   const v = withSearch({ ...product, model, search_term: product.search_term || product.search_term_auto });
   const params: unknown[] = [v.internal_code, v.name, v.brand, v.model, v.search_term, v.url_torob || null, v.url_digikala || null, v.url_emalls || null,
-    v.search_norm, v.search_compact, v.code_norm, v.name_norm, companyId];
+    v.search_norm, v.search_compact, v.code_norm, v.name_norm, companyId, v.url_hooshmand || null];
   if (id) {
     const row = await one<Product>(
       `UPDATE products SET internal_code=$1, name=$2, brand=$3, model=$4, search_term=$5, url_torob=$6, url_digikala=$7, url_emalls=$8,
-              search_norm=$9, search_compact=$10, code_norm=$11, name_norm=$12, updated_at=now()
-        WHERE company_id = $13 AND id = $14 AND deleted_at IS NULL RETURNING ${COLS}`,
+              search_norm=$9, search_compact=$10, code_norm=$11, name_norm=$12, url_hooshmand=$14, updated_at=now()
+        WHERE company_id = $13 AND id = $15 AND deleted_at IS NULL RETURNING ${COLS}`,
       [...params, id],
     );
     if (!row) throw new BadRequest("کالا پیدا نشد.");
     return row;
   }
   return (await one<Product>(
-    `INSERT INTO products (internal_code, name, brand, model, search_term, url_torob, url_digikala, url_emalls, search_norm, search_compact, code_norm, name_norm, company_id, sort_order)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13, (SELECT COALESCE(max(sort_order), 0) + 1 FROM products WHERE company_id = $13))
+    `INSERT INTO products (internal_code, name, brand, model, search_term, url_torob, url_digikala, url_emalls, search_norm, search_compact, code_norm, name_norm, company_id, url_hooshmand, sort_order)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, (SELECT COALESCE(max(sort_order), 0) + 1 FROM products WHERE company_id = $13))
      RETURNING ${COLS}`,
     params,
   ))!;
 }
 
 export async function setPin(companyId: number, id: number, site: string, url: string | null) {
-  const col = { torob: "url_torob", digikala: "url_digikala", emalls: "url_emalls" }[site];
+  const col = { torob: "url_torob", digikala: "url_digikala", emalls: "url_emalls", hooshmand: "url_hooshmand" }[site];
   if (!col) throw new BadRequest("سایت نامعتبر است.");
   return one<Product>(`UPDATE products SET ${col} = $3, updated_at = now() WHERE company_id = $1 AND id = $2 AND deleted_at IS NULL RETURNING ${COLS}`, [companyId, id, url]);
 }
@@ -152,7 +152,7 @@ export async function softDelete(companyId: number, id: number) {
 
 type Q = <R = Record<string, unknown>>(text: string, params?: unknown[]) => Promise<R[]>;
 
-const EXISTING_SQL = `SELECT id, internal_code, name, brand, model, search_term, url_torob, url_digikala, url_emalls, sort_order, price_level1, price_level2,
+const EXISTING_SQL = `SELECT id, internal_code, name, brand, model, search_term, url_torob, url_digikala, url_emalls, url_hooshmand, sort_order, price_level1, price_level2,
                              (inactive_at IS NOT NULL) AS inactive
                         FROM products WHERE company_id = $1 AND deleted_at IS NULL`;
 
@@ -232,13 +232,13 @@ export async function finishImport(
 
     for (let i = 0; i < inserts.length; i += 1000) {
       const ids = await q<{ id: number }>(
-        `INSERT INTO products (company_id, internal_code, name, brand, model, search_term, url_torob, url_digikala, url_emalls, sort_order,
+        `INSERT INTO products (company_id, internal_code, name, brand, model, search_term, url_torob, url_digikala, url_emalls, url_hooshmand, sort_order,
                                price_level1, price_level2, prices_updated_at, search_norm, search_compact, code_norm, name_norm)
-         SELECT $1, x.internal_code, x.name, x.brand, x.model, x.search_term, x.url_torob, x.url_digikala, x.url_emalls, x.sort_order,
+         SELECT $1, x.internal_code, x.name, x.brand, x.model, x.search_term, x.url_torob, x.url_digikala, x.url_emalls, x.url_hooshmand, x.sort_order,
                 x.price_level1, x.price_level2, CASE WHEN x.price_level1 IS NOT NULL OR x.price_level2 IS NOT NULL THEN now() END,
                 x.search_norm, x.search_compact, x.code_norm, x.name_norm
            FROM jsonb_to_recordset($2::jsonb) AS x(internal_code text, name text, brand text, model text, search_term text,
-                url_torob text, url_digikala text, url_emalls text, sort_order int, price_level1 bigint, price_level2 bigint,
+                url_torob text, url_digikala text, url_emalls text, url_hooshmand text, sort_order int, price_level1 bigint, price_level2 bigint,
                 search_norm text, search_compact text, code_norm text, name_norm text)
          RETURNING id`,
         [companyId, JSON.stringify(inserts.slice(i, i + 1000))],
@@ -255,7 +255,7 @@ export async function finishImport(
       await q(
         `INSERT INTO import_changes (import_id, product_id, action, before)
          SELECT $1, p.id, 'update', jsonb_build_object('internal_code', p.internal_code, 'name', p.name, 'brand', p.brand, 'model', p.model,
-                'search_term', p.search_term, 'url_torob', p.url_torob, 'url_digikala', p.url_digikala, 'url_emalls', p.url_emalls,
+                'search_term', p.search_term, 'url_torob', p.url_torob, 'url_digikala', p.url_digikala, 'url_emalls', p.url_emalls, 'url_hooshmand', p.url_hooshmand,
                 'sort_order', p.sort_order, 'inactive_at', p.inactive_at,
                 'price_level1', p.price_level1, 'price_level2', p.price_level2, 'prices_updated_at', p.prices_updated_at)
            FROM products p WHERE p.company_id = $2 AND p.id = ANY($3::bigint[])`,
@@ -263,14 +263,14 @@ export async function finishImport(
       );
       await q(
         `UPDATE products p SET internal_code = x.internal_code, name = x.name, brand = x.brand, model = x.model, search_term = x.search_term,
-                url_torob = x.url_torob, url_digikala = x.url_digikala, url_emalls = x.url_emalls, sort_order = x.sort_order,
+                url_torob = x.url_torob, url_digikala = x.url_digikala, url_emalls = x.url_emalls, url_hooshmand = x.url_hooshmand, sort_order = x.sort_order,
                 prices_updated_at = CASE WHEN p.price_level1 IS DISTINCT FROM x.price_level1 OR p.price_level2 IS DISTINCT FROM x.price_level2
                                          THEN now() ELSE p.prices_updated_at END,
                 price_level1 = x.price_level1, price_level2 = x.price_level2,
                 search_norm = x.search_norm, search_compact = x.search_compact, code_norm = x.code_norm, name_norm = x.name_norm,
                 inactive_at = NULL, updated_at = now()
            FROM jsonb_to_recordset($2::jsonb) AS x(id bigint, internal_code text, name text, brand text, model text, search_term text,
-                url_torob text, url_digikala text, url_emalls text, sort_order int, price_level1 bigint, price_level2 bigint,
+                url_torob text, url_digikala text, url_emalls text, url_hooshmand text, sort_order int, price_level1 bigint, price_level2 bigint,
                 search_norm text, search_compact text, code_norm text, name_norm text)
           WHERE p.company_id = $1 AND p.id = x.id`,
         [companyId, JSON.stringify(chunk.map((u) => ({ id: u.existing.id, ...withSearch(u.final as FinalRow) })))],
@@ -355,12 +355,12 @@ export async function undoLastImport(companyId: number, userId: number, importId
       const restored = updated.map((u) => ({ id: u.product_id, ...u.before, ...withSearch(u.before as unknown as FinalRow) }));
       await q(
         `UPDATE products p SET internal_code = x.internal_code, name = x.name, brand = x.brand, model = x.model, search_term = x.search_term,
-                url_torob = x.url_torob, url_digikala = x.url_digikala, url_emalls = x.url_emalls, sort_order = x.sort_order,
+                url_torob = x.url_torob, url_digikala = x.url_digikala, url_emalls = x.url_emalls, url_hooshmand = x.url_hooshmand, sort_order = x.sort_order,
                 inactive_at = x.inactive_at, price_level1 = x.price_level1, price_level2 = x.price_level2, prices_updated_at = x.prices_updated_at,
                 search_norm = x.search_norm, search_compact = x.search_compact, code_norm = x.code_norm,
                 name_norm = x.name_norm, updated_at = now()
            FROM jsonb_to_recordset($2::jsonb) AS x(id bigint, internal_code text, name text, brand text, model text, search_term text,
-                url_torob text, url_digikala text, url_emalls text, sort_order int, inactive_at timestamptz,
+                url_torob text, url_digikala text, url_emalls text, url_hooshmand text, sort_order int, inactive_at timestamptz,
                 price_level1 bigint, price_level2 bigint, prices_updated_at timestamptz, search_norm text,
                 search_compact text, code_norm text, name_norm text)
           WHERE p.company_id = $1 AND p.id = x.id`,

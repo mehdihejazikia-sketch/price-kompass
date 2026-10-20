@@ -80,3 +80,16 @@ export const emallsHome = () =>
   page(`<header><form action="/search" method="get"><input type="search" name="q" placeholder="جستجو در ایمالز"><button>جستجو</button></form></header><main>پیشنهادهای امروز</main>`);
 
 export const emalls404 = () => page(`<h1>خطای ۴۰۴</h1><p>صفحه مورد نظر پیدا نشد :(</p>`);
+
+// hooshmandco.com: a WordPress/WooCommerce shop (home page, then ?s=…&post_type=product)
+export const hooshmandHome = () =>
+  page(`<header><form role="search" action="/"><input type="search" name="s" placeholder="جستجوی محصولات"></form></header>`, `<link rel="stylesheet" href="/wp-content/themes/shop/style.css">`);
+
+export const hooshmandResults = () =>
+  page(`<ul class="products">
+    <li class="product type-product instock"><a href="https://www.hooshmandco.com/product/gplus-gdm-278ln/" class="woocommerce-LoopProduct-link"><h2 class="woocommerce-loop-product__title">مانیتور جی پلاس GDM-278LN</h2>
+      <span class="price"><span class="woocommerce-Price-amount amount"><bdi>۷٬۱۰۰٬۰۰۰&nbsp;<span class="woocommerce-Price-currencySymbol">تومان</span></bdi></span></span></a></li>
+    <li class="product type-product instock"><a href="https://www.hooshmandco.com/product/gplus-gdm-248cs/" class="woocommerce-LoopProduct-link"><h2 class="woocommerce-loop-product__title">مانیتور 24 اینچ جی پلاس مدل GDM-248CS</h2>
+      <span class="price"><del><span class="woocommerce-Price-amount amount"><bdi>۴٬۹۰۰٬۰۰۰&nbsp;<span class="woocommerce-Price-currencySymbol">تومان</span></bdi></span></del>
+      <ins><span class="woocommerce-Price-amount amount"><bdi>۴٬۵۵۰٬۰۰۰&nbsp;<span class="woocommerce-Price-currencySymbol">تومان</span></bdi></span></ins></span></a></li>
+  </ul>`, `<link rel="stylesheet" href="/wp-content/plugins/woocommerce/style.css">`);

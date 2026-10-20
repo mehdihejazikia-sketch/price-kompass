@@ -4,7 +4,7 @@ import { normalizeCode, toLatinDigits } from "./normalize";
 import { SITES, urlBelongsToSite, type SiteId } from "./sites";
 
 /** Import columns, in the order of our accounting export (then the optional extras). */
-export const PRODUCT_FIELDS = ["name", "internal_code", "sort_order", "price_level1", "price_level2", "model", "search_term", "brand", "url_torob", "url_digikala", "url_emalls"] as const;
+export const PRODUCT_FIELDS = ["name", "internal_code", "sort_order", "price_level1", "price_level2", "model", "search_term", "brand", "url_torob", "url_digikala", "url_emalls", "url_hooshmand"] as const;
 export type ProductField = (typeof PRODUCT_FIELDS)[number];
 export type ProductInput = Partial<Record<ProductField, string>>;
 
@@ -18,6 +18,7 @@ export type Product = {
   url_torob: string | null;
   url_digikala: string | null;
   url_emalls: string | null;
+  url_hooshmand: string | null;
   sort_order: number | null;
   /** our own selling prices from the accounting file, in Toman */
   price_level1: number | null;
@@ -41,6 +42,7 @@ export const FIELD_LABELS: Record<ProductField, string> = {
   url_torob: "لینک ترب",
   url_digikala: "لینک دیجی‌کالا",
   url_emalls: "لینک ایمالز",
+  url_hooshmand: "لینک هوشمند",
 };
 
 export const urlField = (site: SiteId) => `url_${site}` as const;
@@ -60,6 +62,7 @@ export type CleanProduct = {
   url_torob: string;
   url_digikala: string;
   url_emalls: string;
+  url_hooshmand: string;
 };
 
 const clip = (v: unknown, n: number) => String(v ?? "").replace(/[\s ]+/g, " ").trim().slice(0, n);
@@ -118,6 +121,7 @@ export const HEADER_SYNONYMS: Record<ProductField, string[]> = {
   url_torob: ["لینک ترب", "url torob", "url_torob"],
   url_digikala: ["لینک دیجی کالا", "لینک دیجیکالا", "url digikala", "url_digikala"],
   url_emalls: ["لینک ایمالز", "url emalls", "url_emalls"],
+  url_hooshmand: ["لینک هوشمند", "url hooshmand", "url_hooshmand"],
 };
 
 /**

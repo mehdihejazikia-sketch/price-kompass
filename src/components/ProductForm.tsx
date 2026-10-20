@@ -18,6 +18,7 @@ export function ProductForm({ product }: { product?: Product }) {
     url_torob: product?.url_torob ?? "",
     url_digikala: product?.url_digikala ?? "",
     url_emalls: product?.url_emalls ?? "",
+    url_hooshmand: product?.url_hooshmand ?? "",
   });
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);

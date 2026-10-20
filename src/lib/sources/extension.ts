@@ -24,7 +24,7 @@ function runtime(): ChromeRuntime | null {
   return c?.runtime?.sendMessage ? c.runtime : null;
 }
 
-export type ExtensionInfo = { installed: boolean; version?: string };
+export type ExtensionInfo = { installed: boolean; version?: string; sites?: string[] };
 
 export async function pingExtension(timeout = 1500): Promise<ExtensionInfo> {
   const rt = runtime();
@@ -35,8 +35,8 @@ export async function pingExtension(timeout = 1500): Promise<ExtensionInfo> {
       rt.sendMessage(EXTENSION_ID, { type: "ping" }, (res) => {
         clearTimeout(t);
         void rt.lastError; // read it so Chrome doesn't log "Unchecked runtime.lastError"
-        const r = res as { ok?: boolean; version?: string } | undefined;
-        resolve(r?.ok ? { installed: true, version: r.version } : { installed: false });
+        const r = res as { ok?: boolean; version?: string; sites?: string[] } | undefined;
+        resolve(r?.ok ? { installed: true, version: r.version, sites: r.sites } : { installed: false });
       });
     } catch {
       clearTimeout(t);
@@ -48,11 +48,19 @@ export async function pingExtension(timeout = 1500): Promise<ExtensionInfo> {
 export const extensionSource: PriceSource = {
   id: "extension",
   label: "افزونه مرورگر",
-  sites: ["torob", "digikala", "emalls"],
+  sites: ["torob", "digikala", "emalls", "hooshmand"],
   async available() {
     return (await pingExtension()).installed;
   },
-  check(product: CheckProduct, sites: SiteId[], on: CheckHandlers, signal?: AbortSignal) {
+  async check(product: CheckProduct, wanted: SiteId[], on: CheckHandlers, signal?: AbortSignal) {
+    // an older extension doesn't know newer sites: ask the user to update instead of waiting forever
+    const info = await pingExtension();
+    const known = info.sites ?? ["torob", "digikala", "emalls"];
+    for (const site of wanted.filter((s) => !known.includes(s))) {
+      on.result({ site, status: "error", source: "extension", message: "برای این سایت، افزونه را به‌روز کنید (صفحه «افزونه»)." });
+    }
+    const sites = wanted.filter((s) => known.includes(s));
+    if (!sites.length) return;
     return new Promise<void>((resolve, reject) => {
       const rt = runtime();
       if (!rt) return reject(new Error("extension missing"));

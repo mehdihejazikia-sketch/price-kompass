@@ -22,6 +22,7 @@ export type ExistingProduct = {
   url_torob: string | null;
   url_digikala: string | null;
   url_emalls: string | null;
+  url_hooshmand: string | null;
   sort_order: number | null;
   price_level1: number | null;
   price_level2: number | null;
@@ -191,6 +192,7 @@ function finalForNew(c: CleanProduct): FinalRow {
     url_torob: c.url_torob || null,
     url_digikala: c.url_digikala || null,
     url_emalls: c.url_emalls || null,
+    url_hooshmand: c.url_hooshmand || null,
     sort_order: c.sort_order,
     price_level1: c.price_level1,
     price_level2: c.price_level2,
@@ -219,6 +221,7 @@ export function mergeRow(c: FileRow, old: ExistingProduct, has: Set<ProductField
     url_torob: c.url_torob || old.url_torob,
     url_digikala: c.url_digikala || old.url_digikala,
     url_emalls: c.url_emalls || old.url_emalls,
+    url_hooshmand: c.url_hooshmand || old.url_hooshmand,
     sort_order: has.has("sort_order") && c.sort_order !== null ? c.sort_order : old.sort_order,
     // a price column in the file is the truth: an empty cell means "no price"
     price_level1: has.has("price_level1") ? c.price_level1 : old.price_level1,
@@ -234,7 +237,7 @@ function changesOf(old: ExistingProduct, f: FinalRow): Change[] {
   if ((old.model || "") !== f.model) ch.push("model");
   if ((old.search_term || "") !== f.search_term) ch.push("search_term");
   if ((old.brand || "") !== f.brand) ch.push("brand");
-  if (old.url_torob !== f.url_torob || old.url_digikala !== f.url_digikala || old.url_emalls !== f.url_emalls) ch.push("url");
+  if (old.url_torob !== f.url_torob || old.url_digikala !== f.url_digikala || old.url_emalls !== f.url_emalls || (old.url_hooshmand ?? null) !== (f.url_hooshmand ?? null)) ch.push("url");
   if (old.inactive) ch.push("reactivate");
   if (old.sort_order !== f.sort_order) ch.push("sort");
   return ch;

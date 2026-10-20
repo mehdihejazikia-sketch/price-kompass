@@ -1,11 +1,12 @@
-export const SITES = ["torob", "digikala", "emalls"] as const;
+export const SITES = ["torob", "digikala", "emalls", "hooshmand"] as const;
 export type SiteId = (typeof SITES)[number];
 
-export const SITE_INFO: Record<SiteId, { label: string; home: string; color: string }> = {
+export const SITE_INFO: Record<SiteId, { label: string; home: string; host: string; color: string }> = {
   // chart/series colors: CSS variables (light + dark steps, colorblind-checked)
-  torob: { label: "ترب", home: "https://torob.com", color: "var(--site-torob)" },
-  digikala: { label: "دیجی‌کالا", home: "https://www.digikala.com", color: "var(--site-digikala)" },
-  emalls: { label: "ایمالز", home: "https://emalls.ir", color: "var(--site-emalls)" },
+  torob: { label: "ترب", home: "https://torob.com", host: "torob.com", color: "var(--site-torob)" },
+  digikala: { label: "دیجی‌کالا", home: "https://www.digikala.com", host: "digikala.com", color: "var(--site-digikala)" },
+  emalls: { label: "ایمالز", home: "https://emalls.ir", host: "emalls.ir", color: "var(--site-emalls)" },
+  hooshmand: { label: "هوشمند", home: "https://www.hooshmandco.com", host: "hooshmandco.com", color: "var(--site-hooshmand)" },
 };
 
 /** The site's own search page, for the manual fallback button. */
@@ -20,6 +21,9 @@ export function searchUrl(site: SiteId, term: string): string {
       // eMalls' search address is not documented (the old guess gave 404): open the
       // home page; the extension searches with eMalls' own search box
       return "https://emalls.ir/";
+    case "hooshmand":
+      // WordPress-style search; the extension itself uses the site's search box
+      return `https://www.hooshmandco.com/?s=${q}`;
   }
 }
 
@@ -31,7 +35,7 @@ export function isSite(s: unknown): s is SiteId {
 export function urlBelongsToSite(site: SiteId, url: string): boolean {
   try {
     const h = new URL(url).hostname.replace(/^www\./, "");
-    return site === "torob" ? h.endsWith("torob.com") : site === "digikala" ? h.endsWith("digikala.com") : h.endsWith("emalls.ir");
+    return h === SITE_INFO[site].host || h.endsWith("." + SITE_INFO[site].host);
   } catch {
     return false;
   }

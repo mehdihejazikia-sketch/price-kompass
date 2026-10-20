@@ -54,12 +54,15 @@ test("live check for 88724 (GDM-248CS) on torob, digikala and emalls", async () 
   await expect(page.getByTestId("price-torob")).toHaveText("۴٬۵۹۰٬۰۰۰ تومان", { timeout: 45000 });
   await expect(page.getByTestId("price-digikala")).toHaveText("۴٬۷۵۰٬۰۰۰ تومان", { timeout: 45000 });
   await expect(page.getByTestId("price-emalls")).toHaveText("۴٬۶۲۰٬۰۰۰ تومان", { timeout: 45000 });
+  // hooshmandco.com (WooCommerce): the sale price, the right model
+  await expect(page.getByTestId("price-hooshmand")).toHaveText("۴٬۵۵۰٬۰۰۰ تومان", { timeout: 45000 });
+  await expect(page.getByTestId("row-hooshmand")).toContainText("GDM-248CS");
 
   const torob = page.getByTestId("row-torob");
   await expect(torob).toContainText("GDM-248CS"); // found title, the right model (not GDM-278LN)
   await expect(torob).toContainText("کالا مطابقت دارد");
   await expect(torob).toContainText("۱۲ فروشنده");
-  await expect(torob).toContainText("کمترین قیمت");
+  await expect(page.getByTestId("row-hooshmand")).toContainText("کمترین قیمت");
   await expect(page.getByTestId("row-digikala")).toContainText("۴۷٬۵۰۰٬۰۰۰ ریال"); // Rial shown, converted to Toman
   await expect(page.getByTestId("row-emalls")).toContainText("۵ فروشنده");
   await page.setViewportSize({ width: 1440, height: 900 });

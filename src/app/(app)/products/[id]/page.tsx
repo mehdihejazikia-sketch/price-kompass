@@ -36,7 +36,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           model: product.model,
           brand: product.brand,
           search_term: product.search_term,
-          urls: { torob: product.url_torob, digikala: product.url_digikala, emalls: product.url_emalls },
+          urls: { torob: product.url_torob, digikala: product.url_digikala, emalls: product.url_emalls, hooshmand: product.url_hooshmand },
         }}
         initialLast={JSON.parse(JSON.stringify(last))}
         initialHistory={JSON.parse(JSON.stringify(history))}

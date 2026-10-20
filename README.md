@@ -64,7 +64,7 @@ npm run test:e2e            # browser tests (Playwright, uses database pk_test)
 - Install page on the site: «افزونه» (download zip → Load unpacked in `edge://extensions` or
   `chrome://extensions`, Developer mode on). The zip is built on every deploy with the site's own
   domain allowed (`externally_connectable`); for a custom domain set `EXTENSION_ALLOWED_ORIGINS`.
-- Opening a product checks Torob, Digikala and eMalls one after another in background tabs, saves
+- Opening a product checks Torob, Digikala, eMalls and Hooshmand (hooshmandco.com) one after another in background tabs, saves
   every result to the price history and shows the last known prices instantly meanwhile.
 - «این کالای درست است» pins that product page, so later checks open it directly.
 - One parser per site in `extension/parsers/`; see `extension/README.md` when a site changes.

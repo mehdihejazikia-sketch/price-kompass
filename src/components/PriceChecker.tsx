@@ -122,11 +122,11 @@ export function PriceChecker({
   }, [urls, running, check]);
 
   async function pin(site: SiteId, url: string | null) {
-    const { product: p } = await apiFetch<{ product: { url_torob: string | null; url_digikala: string | null; url_emalls: string | null } }>(
+    const { product: p } = await apiFetch<{ product: { url_torob: string | null; url_digikala: string | null; url_emalls: string | null; url_hooshmand: string | null } }>(
       `/api/products/${product.id}/pin`,
       { method: "POST", json: { site, url } },
     );
-    setUrls({ torob: p.url_torob, digikala: p.url_digikala, emalls: p.url_emalls });
+    setUrls({ torob: p.url_torob, digikala: p.url_digikala, emalls: p.url_emalls, hooshmand: p.url_hooshmand });
     setRows((r) => {
       const live = r[site].live;
       return live ? { ...r, [site]: { ...r[site], live: { ...live, match: url ? "pinned" : live.match, pinned: !!url } } } : r;

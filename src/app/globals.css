@@ -22,6 +22,7 @@
   --site-torob: #eb6834;
   --site-digikala: #1baf7a;
   --site-emalls: #2a78d6;
+  --site-hooshmand: #eda100;
   --grid: #eceef1;
   color-scheme: light;
 }
@@ -44,6 +45,7 @@
   --site-torob: #d95926;
   --site-digikala: #199e70;
   --site-emalls: #3987e5;
+  --site-hooshmand: #c98500;
   --grid: #242932;
   color-scheme: dark;
 }

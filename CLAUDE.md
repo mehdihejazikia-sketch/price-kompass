@@ -33,3 +33,10 @@
   successful import are saved as the company's import format (incl. `price_unit`). Product page:
   «قیمت‌های سیستم» box above «قیمت در سایت‌ها» (with a «نسبت به سطح ۱» column). Export uses the
   same layout. Real file for tests: `samples/products-prices.xlsx` (git-ignored).
+- Fourth site (Oct 2026): hooshmandco.com («هوشمند», site id `hooshmand`, `products.url_hooshmand`,
+  migration 005). Its layout was unknown (unreachable from the cloud), so `extension/parsers/hooshmand.js`
+  is a general shop parser: WordPress `/?s=…&post_type=product` or the site's search box, then
+  JSON-LD → WooCommerce cards → links with a price. Search address learned like eMalls
+  (`searchTpl:hooshmand`). Extension 1.3.0; older extensions get «افزونه را به‌روز کنید» for it.
+  Adding another site: `src/lib/sites.ts`, `extension/sites.js` + manifest host permission,
+  a parser file, a `url_<site>` column (migration) and the url_* lists in products/importDiff.
