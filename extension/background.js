@@ -99,7 +99,7 @@ export async function checkSite(site, product) {
       const links = parsed.candidates ?? [];
       const listDebug = parsed.debug;
       const pick = pickBest(links, product);
-      if (pick && pick.match !== "weak" && (pick.url || pick.index !== undefined)) {
+      if (pick && (pick.url || pick.index !== undefined)) {
         const before = (await chrome.tabs.get(tabId)).url;
         if (pick.url) await chrome.tabs.update(tabId, { url: pick.url });
         else {
@@ -130,7 +130,7 @@ export async function checkSite(site, product) {
     if (!best) return { ...base, status: "not_found", message: "نتیجه‌ای پیدا نشد." };
     // The right product is in the results but its price isn't shown there (eMalls'
     // result cards, search-as-you-type lists…): open the product page and read it there.
-    if (parsed.kind !== "product" && !best.price && best.url && best.match !== "weak") {
+    if (parsed.kind !== "product" && !best.price && best.url) {
       await chrome.tabs.update(tabId, { url: best.url });
       await new Promise((r) => setTimeout(r, 800));
       const page = await readTab(tabId, site, { term: usedTerm, model, pinned: true });

@@ -66,3 +66,8 @@
   PC); its result cards gave no readable price, so whenever the best match has no price (any site), the
   product page (eMalls `…~id~N`, JSON-LD AggregateOffer) is opened and read; the enriched candidate
   replaces the one in `candidates` (the website re-checks them). Price regexes accept «٫».
+- Oct 21: the best result is never hidden any more — uncertain matches ("partial"/"weak") show their
+  price with a small «مطمئن شوید» badge + «این کالای درست است» (still excluded from lowest/chart via
+  CONFIRMED). Matcher splits stuck-together accounting words («لنووlenovo», «شارژرنوت») and gives a
+  spec-like model (lenovo20v/3.25A) credit when all its numbers are in the title. Extension 1.9.0 also
+  opens product pages for uncertain matches when the list has no price.

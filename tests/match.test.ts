@@ -43,14 +43,28 @@ describe("matcher: type + brand + model", () => {
     expect(best.match).toBe("exact");
   });
 
-  it("weak results become 'not found' with a suggestion", () => {
+  it("uncertain results keep their price, marked as weak (not hidden)", () => {
     const r = evaluateResult(
       { site: "torob", status: "ok", source: "extension", title: "ایرپاد بلوتوثی مدل M90 PRO", price: 965000, price_toman: 965000, currency: "IRT", match: "partial" },
       { id: 1, ...mouse, search_term: "موس LOGITECH M-90", urls: {} },
     );
-    expect(r.status).toBe("not_found");
-    expect(r.price_toman).toBeNull();
-    expect(r.suggestion?.title).toContain("M90 PRO");
+    expect(r.status).toBe("ok");
+    expect(r.price_toman).toBe(965000);
+    expect(r.match).toBe("weak");
+  });
+
+  it("stuck-together accounting names match the right charger (screenshot case)", () => {
+    const p = { name: "شارژرنوت بوک لنووlenovo 20v/3.25A -usb", model: "lenovo20v/3.25A" };
+    const s = productSignals(p);
+    expect(s.type).toContain("شارژر");
+    expect(s.brands[0]).toContain("لنوو");
+    for (const title of [
+      "شارژر لپ تاپ 20 ولت 3.25 آمپر لنوو مدل ADLX65NTC3A",
+      "آداپتور لپ تاپی 20 ولت 3.25 آمپر بین راهی 20V-3.25A با کانکتور USB مارک LENOVO Slim Tip",
+      "شارژر لپ تاپ Lenovo 20V 3.25A 65W فیش USB Lenovo laptop charger 20V 3.25A 65W USB plug",
+    ]) {
+      expect(pickBest([{ title, price: 1 }], p)!.match, title).not.toBe("weak");
+    }
   });
 
   it("pinned product pages are trusted", () => {

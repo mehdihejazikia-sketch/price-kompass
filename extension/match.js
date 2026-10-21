@@ -17,6 +17,10 @@ export function norm(s) {
     .replace(/ك/g, "ک")
     .replace(/[أإآ]/g, "ا")
     .replace(/[​-‏﻿]/g, "")
+    // words stuck together in accounting names: «لنووlenovo» → «لنوو lenovo», «شارژرنوت» → «شارژر نوت»
+    .replace(/([\u0600-\u06FF])([A-Za-z0-9])/g, "$1 $2")
+    .replace(/([A-Za-z0-9])([\u0600-\u06FF])/g, "$1 $2")
+    .replace(/(شارژر|آداپتور|اداپتور|کیبورد|کیبرد|ماوس|موس|کابل|کیف|باتری|باطری)(?=[\u0600-\u06FF]{2,})/g, "$1 ")
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
@@ -151,7 +155,12 @@ export function score(candidate, product, signals = productSignals(product)) {
   const reasons = [];
   if (signals.model && signals.model.length >= 3) {
     if (tc.includes(signals.model)) s += 50;
-    else { s -= 15; reasons.push("model"); }
+    else {
+      // a spec-like "model" (lenovo20v/3.25A): all its numbers in the title count almost as much
+      const nums = signals.model.match(/\d+/g) ?? [];
+      if (nums.length >= 2 && nums.every((n) => tc.includes(n))) s += 35;
+      else { s -= 15; reasons.push("model"); }
+    }
   }
   if (signals.type) {
     if (signals.type.some((w) => has(tn, tc, w))) s += 30;

@@ -1,5 +1,4 @@
 import { pickBest } from "../match";
-import { SITE_INFO } from "../sites";
 import type { CheckProduct, SiteResult } from "./types";
 
 const toman = (price: number | null | undefined, currency: string | null | undefined) =>
@@ -7,9 +6,10 @@ const toman = (price: number | null | undefined, currency: string | null | undef
 
 /**
  * Re-check which search result is really our product (type + brand + model),
- * whatever source produced it. A wrong product never becomes "the price": it
- * turns into not_found with the closest result as a suggestion the user can
- * confirm. Confirmed product pages (pinned) are trusted as they are.
+ * whatever source produced it. The best result is always shown with its price;
+ * `match` says how sure we are: "exact", or "partial"/"weak" → a small «مطمئن شوید»
+ * mark and the «این کالای درست است» button. Only exact or confirmed (pinned)
+ * results count as lowest price / chart / export. Pinned pages are trusted as they are.
  */
 export function evaluateResult(res: SiteResult, product: CheckProduct): SiteResult {
   if (res.pinned || res.match === "pinned" || res.kind === "product") return res;
@@ -30,15 +30,5 @@ export function evaluateResult(res: SiteResult, product: CheckProduct): SiteResu
     seller_count: best.seller_count ?? null,
     match: best.match,
   };
-  if (best.match === "weak") {
-    return {
-      ...picked,
-      status: "not_found",
-      price: null,
-      price_toman: null,
-      message: `کالای مطابق در ${SITE_INFO[res.site].label} پیدا نشد.`,
-      suggestion: { title: best.title, price_toman, url: best.url ?? null },
-    };
-  }
   return { ...picked, status: price_toman ? "ok" : "not_found", message: price_toman ? null : "کالا پیدا شد ولی قیمت ندارد (احتمالاً ناموجود)." };
 }

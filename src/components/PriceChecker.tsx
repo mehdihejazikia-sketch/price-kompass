@@ -15,8 +15,8 @@ type ExtState = "detecting" | "missing" | "ready";
 const MATCH: Record<string, [string, string]> = {
   exact: ["کالا مطابقت دارد", "bg-good-soft text-good"],
   pinned: ["لینک ثابت", "bg-accent-soft text-accent"],
-  partial: ["مطابقت ناقص؛ بررسی کنید", "bg-warn-soft text-warn"],
-  weak: ["شاید کالای دیگری باشد", "bg-bad-soft text-bad"],
+  partial: ["مطمئن شوید", "bg-warn-soft text-warn"],
+  weak: ["مطمئن شوید", "bg-warn-soft text-warn"],
 };
 
 export function PriceChecker({
