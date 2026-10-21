@@ -18,9 +18,8 @@ export function searchUrl(site: SiteId, term: string): string {
     case "digikala":
       return `https://www.digikala.com/search/?q=${q}`;
     case "emalls":
-      // eMalls' search address is not documented (the old guess gave 404): open the
-      // home page; the extension searches with eMalls' own search box
-      return "https://emalls.ir/";
+      // eMalls' own search address (seen on a real PC): …/لیست-قیمت~skey~<term>
+      return `https://emalls.ir/${encodeURIComponent("لیست-قیمت")}~skey~${encodeURIComponent(term.trim().replace(/\s+/g, " "))}`;
     case "hooshmand":
       // no search results page: the site searches while you type in its search box
       return "https://www.hooshmandco.com/";

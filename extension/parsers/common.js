@@ -187,7 +187,7 @@
       const res = await parser(ctx, globalThis.__pk);
       if ((!res || !res.candidates?.length) && blockedReason()) return { blocked: blockedReason(), kind: res?.kind ?? "unknown", candidates: [] };
       // nothing found: report what the page looked like, for fixing the parser remotely
-      if (res && res.kind !== "navigating" && !res.candidates?.length) res.debug = pageSnapshot();
+      if (res && res.kind !== "navigating" && (!res.candidates?.length || !res.candidates.some((c) => c.price))) res.debug = pageSnapshot();
       else if (res && res.kind === "links") res.debug = { steps: globalThis.__pkSteps ?? [] };
       return res;
     } catch (e) {

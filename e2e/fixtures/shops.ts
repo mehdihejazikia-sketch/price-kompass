@@ -127,3 +127,16 @@ export const hooshmandNotFound = () => page(`<div>پیدا نشد! آدرس مو
 // OpenCart search with no hits (OpenCart needs every word of the search in the name)
 export const hooshmandNoResults = () =>
   page(`<h1>جستجو</h1><p>هیچ محصولی مطابق با معیارهای جستجو وجود ندارد.</p>`, `<link href="/catalog/view/theme/default/stylesheet/stylesheet.css" rel="stylesheet">`);
+
+// eMalls as seen on a real PC: search at /لیست-قیمت~skey~<term>; the result cards
+// show no price that can be read, the product page (…~id~N) has it (JSON-LD).
+export const emallsSkeyResults = () =>
+  page(`<div class="grid">
+    <div class="card"><a href="/مشخصات_LG-24MK430H~id~777"><img alt=""></a><h3><a href="/مشخصات_LG-24MK430H~id~777">مانیتور ال جی 24MK430H</a></h3><div class="p">قیمت: <span>استعلام</span></div></div>
+    <div class="card"><a href="/مشخصات_Gplus-GDM-248CS~id~555"><img alt=""></a><h3><a href="/مشخصات_Gplus-GDM-248CS~id~555">مانیتور جی پلاس مدل GDM-248CS</a></h3><div class="p">قیمت: <span>استعلام</span></div></div>
+  </div>`);
+
+export const emallsProduct = () =>
+  page(`<h1>مانیتور جی پلاس مدل GDM-248CS</h1><div>کمترین قیمت: ۴٫۶۲۰٫۰۰۰ تومان</div><div>مقایسه قیمت در ۵ فروشگاه</div>`,
+    `<script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@type": "Product", name: "مانیتور جی پلاس مدل GDM-248CS",
+      offers: { "@type": "AggregateOffer", lowPrice: 4620000, highPrice: 4900000, offerCount: 5, priceCurrency: "IRR", availability: "https://schema.org/InStock" } })}</script>`);

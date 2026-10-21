@@ -8,7 +8,8 @@ export function searchUrl(site, term) {
   if (site === "torob") return `https://torob.com/search/?query=${q}`;
   if (site === "digikala") return `https://www.digikala.com/search/?q=${q}`;
   if (site === "hooshmand") return "https://www.hooshmandco.com/"; // site's own search box (background.js startUrl)
-  return "https://emalls.ir/"; // searched through the site's search box (background.js startUrl)
+  // eMalls' own search address (seen on a real PC, Oct 2026)
+  return `https://emalls.ir/${encodeURIComponent("لیست-قیمت")}~skey~${encodeURIComponent(term.trim().replace(/\s+/g, " "))}`;
 }
 
 export function belongsTo(site, url) {

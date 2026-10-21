@@ -99,7 +99,9 @@ test("live check for 88724 (GDM-248CS) on torob, digikala and emalls", async () 
   await page.getByRole("button", { name: "بررسی دوباره" }).click();
   await expect(page.getByTestId("price-hooshmand")).toHaveText("۴٬۵۰۰٬۰۰۰ تومان", { timeout: 45000 });
   // eMalls: the first check went through its search box; now the learned address is opened directly
-  await expect.poll(() => shops.opened.some((u) => u.startsWith("https://emalls.ir/search?q=")), { timeout: 45000 }).toBe(true);
+  // eMalls: its own ~skey~ search address, then the product page because the cards show no price
+  await expect.poll(() => shops.opened.some((u) => decodeURIComponent(u).includes("~skey~")), { timeout: 45000 }).toBe(true);
+  await expect.poll(() => shops.opened.some((u) => decodeURIComponent(u).includes("~id~555")), { timeout: 45000 }).toBe(true);
   expect(shops.opened.some((u) => u === "https://emalls.ir/")).toBe(false);
   await expect(page.getByTestId("price-emalls")).toBeVisible({ timeout: 45000 });
 

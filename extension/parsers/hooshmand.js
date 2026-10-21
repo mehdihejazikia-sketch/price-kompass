@@ -32,7 +32,7 @@
 
   /** Lowest "… تومان" / "… ریال" in a text. */
   function priceIn(text, pk) {
-    const re = /([\d۰-۹٠-٩][\d۰-۹٠-٩٬,،.]{2,})\s*(تومان|ریال|﷼)/g;
+    const re = /([\d۰-۹٠-٩][\d۰-۹٠-٩٬,،.٫]{2,})\s*(تومان|ریال|﷼)/g;
     let best = null;
     let m;
     while ((m = re.exec(text))) {

@@ -62,3 +62,7 @@
   Debug snapshot now has `steps` and `requests` (the page's fetch/XHR URLs, e.g. its search API).
 - Extension 1.7.0: all sites of one product are checked at the same time (one background tab per
   site, opened 250 ms apart, results sent as each finishes); products are still checked one at a time.
+- Extension 1.8.0: eMalls' real search address is `https://emalls.ir/لیست-قیمت~skey~<term>` (from a real
+  PC); its result cards gave no readable price, so whenever the best match has no price (any site), the
+  product page (eMalls `…~id~N`, JSON-LD AggregateOffer) is opened and read; the enriched candidate
+  replaces the one in `candidates` (the website re-checks them). Price regexes accept «٫».

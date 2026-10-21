@@ -126,8 +126,24 @@ export async function checkSite(site, product) {
       return { ...base, status: "not_found", message: parsed.kind === "product" ? "قیمت در صفحه کالا پیدا نشد." : `کالایی با ${tried} در ${LABELS[site]} پیدا نشد.`, debug: parsed.debug };
     }
     base.search_term = usedTerm;
-    const best = parsed.kind === "product" ? { ...candidates[0], match: "pinned" } : pickBest(candidates, product);
+    let best = parsed.kind === "product" ? { ...candidates[0], match: "pinned" } : pickBest(candidates, product);
     if (!best) return { ...base, status: "not_found", message: "نتیجه‌ای پیدا نشد." };
+    // The right product is in the results but its price isn't shown there (eMalls'
+    // result cards, search-as-you-type lists…): open the product page and read it there.
+    if (parsed.kind !== "product" && !best.price && best.url && best.match !== "weak") {
+      await chrome.tabs.update(tabId, { url: best.url });
+      await new Promise((r) => setTimeout(r, 800));
+      const page = await readTab(tabId, site, { term: usedTerm, model, pinned: true });
+      const c = page.candidates?.[0];
+      if (c?.price) {
+        const enriched = { ...best, price: c.price, currency: c.currency, in_stock: c.in_stock, seller: c.seller ?? best.seller, seller_count: c.seller_count ?? best.seller_count };
+        // the website re-checks the candidates, so the enriched one must be in the list
+        for (let i = 0; i < candidates.length; i++) if (candidates[i].url === best.url) candidates[i] = { ...candidates[i], ...enriched };
+        best = enriched;
+      } else if (page.debug) {
+        parsed.debug = page.debug;
+      }
+    }
     const currency = best.currency === "IRR" ? "IRR" : "IRT";
     const price_toman = best.price ? (currency === "IRR" ? Math.round(best.price / 10) : best.price) : null;
     return {
@@ -189,7 +205,8 @@ async function startUrl(site, term) {
     const q = term.trim().split(/\s+/).map(encodeURIComponent).join(saved.sep || "%20");
     return saved.template.replace("{q}", q);
   }
-  return HOME[site];
+  // eMalls' search address is known now (…/لیست-قیمت~skey~…); others start at the home page
+  return site === "emalls" ? searchUrl(site, term) : HOME[site];
 }
 
 async function learnSearchUrl(site, parsed, term) {

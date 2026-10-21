@@ -6,7 +6,7 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import https from "node:https";
 import os from "node:os";
 import path from "node:path";
-import { captcha, digikalaSearchApi, digikalaShell, emalls404, emallsHome, emallsSearch, hooshmandHome, hooshmandNotFound, hooshmandProduct, torobProduct, torobSearch } from "./shops";
+import { captcha, digikalaSearchApi, digikalaShell, emalls404, emallsHome, emallsProduct, emallsSearch, emallsSkeyResults, hooshmandHome, hooshmandNotFound, hooshmandProduct, torobProduct, torobSearch } from "./shops";
 
 export const SHOP_HOSTS = ["torob.com", "api.torob.com", "www.digikala.com", "api.digikala.com", "emalls.ir", "www.hooshmandco.com"];
 
@@ -38,6 +38,9 @@ export async function startShopServer(port = 443): Promise<ShopServer> {
     if (host === "www.digikala.com") return send(digikalaShell());
     if (host === "emalls.ir") {
       if (state.emallsBlocked) return send(captcha());
+      const path = decodeURIComponent(url.pathname);
+      if (path.includes("~skey~")) return send(emallsSkeyResults());
+      if (path.includes("~id~555")) return send(emallsProduct());
       if (url.pathname === "/") return send(emallsHome());
       if (url.pathname === "/search") return send(emallsSearch());
       return send(emalls404());
