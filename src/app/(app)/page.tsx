@@ -12,7 +12,7 @@ export default async function Home() {
     <div className="mx-auto max-w-3xl space-y-6 pt-[8vh]">
       <div className="text-center">
         <h1 className="text-2xl font-bold">استعلام قیمت کالا</h1>
-        <p className="mt-2 text-muted">قیمت لحظه‌ای در ترب، دیجی‌کالا و ایمالز</p>
+        <p className="mt-2 text-muted">قیمت لحظه‌ای در دیجی‌کالا، ترب، ایمالز و هوشمند</p>
       </div>
       <SearchBox />
       <p className="text-center text-xs text-muted">

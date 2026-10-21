@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/",
     name: "قیمت‌یاب",
     short_name: "قیمت‌یاب",
-    description: "استعلام لحظه‌ای قیمت کالا در ترب، دیجی‌کالا و ایمالز",
+    description: "استعلام لحظه‌ای قیمت کالا در دیجی‌کالا، ترب، ایمالز و هوشمند",
     lang: "fa",
     dir: "rtl",
     start_url: "/",

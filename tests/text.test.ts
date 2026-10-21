@@ -3,6 +3,7 @@ import { compactText, normalizeCode, normalizeName, normalizeText } from "@/lib/
 import { defaultSearchTerm, extractModel } from "@/lib/model";
 import { faNum, formatToman, timeAgo, toToman } from "@/lib/format";
 import { hashPassword, verifyPassword } from "@/lib/server/password";
+import { compareVersions } from "@/lib/version";
 
 describe("normalize", () => {
   it("folds Arabic letters, half-spaces and digits", () => {
@@ -64,5 +65,13 @@ describe("password", () => {
     expect(verifyPassword("secret-123", h)).toBe(true);
     expect(verifyPassword("secret-124", h)).toBe(false);
     expect(verifyPassword("x", "garbage")).toBe(false);
+  });
+});
+
+describe("extension versions", () => {
+  it("compares numerically", () => {
+    expect(compareVersions("1.9.0", "1.10.0")).toBeLessThan(0);
+    expect(compareVersions("1.11.0", "1.11.0")).toBe(0);
+    expect(compareVersions("2.0", "1.11.5")).toBeGreaterThan(0);
   });
 });

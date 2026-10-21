@@ -45,6 +45,8 @@ test("install page detects the extension", async () => {
   await loginAs(page);
   await page.goto("/extension");
   await expect(page.getByTestId("ext-status")).toContainText("افزونه نصب و فعال است");
+  // up to date: no update window or header button
+  await expect(page.getByTestId("ext-update-chip")).toHaveCount(0);
   await page.close();
 });
 

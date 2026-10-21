@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { EXTENSION_VERSION, pingExtension, type ExtensionInfo } from "@/lib/sources/extension";
 import { faDigits } from "@/lib/format";
+import { compareVersions } from "@/lib/version";
 
 export function ExtensionStatus() {
   const [info, setInfo] = useState<ExtensionInfo | null>(null);
@@ -16,7 +17,7 @@ export function ExtensionStatus() {
         افزونه روی این مرورگر نصب نیست (یا برای این آدرس فعال نیست). مراحل زیر را انجام دهید.
       </p>
     );
-  const old = EXTENSION_VERSION && info.version !== EXTENSION_VERSION;
+  const old = !!EXTENSION_VERSION && compareVersions(info.version ?? "0", EXTENSION_VERSION) < 0;
   return (
     <p className={`rounded-lg px-4 py-3 text-sm ${old ? "bg-warn-soft text-warn" : "bg-good-soft text-good"}`} data-testid="ext-status">
       ● افزونه نصب و فعال است (نسخه {faDigits(info.version ?? "")}).

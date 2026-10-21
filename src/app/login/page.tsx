@@ -15,7 +15,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
           <Logo size={52} />
           <h1 className="text-2xl font-bold">قیمت‌یاب</h1>
-          <p className="text-sm text-muted">استعلام قیمت از ترب، دیجی‌کالا و ایمالز</p>
+          <p className="text-sm text-muted">استعلام قیمت از دیجی‌کالا، ترب، ایمالز و هوشمند</p>
         </div>
         <LoginForm next={safeNext} />
       </div>

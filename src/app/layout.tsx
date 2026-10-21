@@ -11,7 +11,7 @@ const vazirmatn = localFont({
 
 export const metadata: Metadata = {
   title: { default: "قیمت‌یاب", template: "%s | قیمت‌یاب" },
-  description: "استعلام لحظه‌ای قیمت کالا در ترب، دیجی‌کالا و ایمالز",
+  description: "استعلام لحظه‌ای قیمت کالا در دیجی‌کالا، ترب، ایمالز و هوشمند",
   applicationName: "قیمت‌یاب",
   robots: { index: false, follow: false },
   icons: { icon: [{ url: "/icons/favicon-32.png", sizes: "32x32" }, { url: "/icons/icon-192.png", sizes: "192x192" }], apple: "/icons/apple-touch-icon.png" },

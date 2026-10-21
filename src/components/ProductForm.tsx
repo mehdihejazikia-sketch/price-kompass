@@ -72,7 +72,7 @@ export function ProductForm({ product }: { product?: Product }) {
           <input className="input ltr text-left" id="f-search_term" value={v.search_term} onChange={set("search_term")} placeholder={defaultSearchTerm(v.name, v.model)} />
         </div>
       </div>
-      <p className="text-xs text-muted">عبارت جستجو همان چیزی است که در ترب، دیجی‌کالا و ایمالز جستجو می‌شود. اگر خالی باشد، مدل یا نام کالا استفاده می‌شود.</p>
+      <p className="text-xs text-muted">عبارت جستجو همان چیزی است که در دیجی‌کالا، ترب، ایمالز و هوشمند جستجو می‌شود. اگر خالی باشد، مدل یا نام کالا استفاده می‌شود.</p>
       <fieldset className="space-y-3">
         <legend className="mb-2 text-sm font-medium">لینک ثابت کالا در هر سایت (اختیاری)</legend>
         {SITES.map((s) => (

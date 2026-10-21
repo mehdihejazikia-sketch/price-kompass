@@ -79,3 +79,8 @@
   eMalls product page no longer stops at JSON-LD without a price; it reads «کمترین قیمت/قیمت از …»,
   prices with a unit, and `pk.boxPrices()` (numbers inside price-class elements, unit only in a header,
   struck prices skipped). Result cards use boxPrices too.
+- Oct 21: `src/components/ExtensionUpdate.tsx` (in the app header): when the installed extension is
+  older than the version in `extension/manifest.json` of this deploy (`compareVersions` in
+  src/lib/version.ts), a dialog (portal on <body>) offers the download + 3 update steps; «بعداً»
+  snoozes it 24 h (localStorage), a «به‌روزرسانی افزونه» header button reopens it. So: every extension
+  change must bump the manifest version, or users are not told.
