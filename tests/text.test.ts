@@ -34,6 +34,8 @@ describe("model extraction", () => {
     expect(extractModel("مانیتور ۲۴ اینچ سامسونگ LS24C310EAMXUE")).toBe("LS24C310EAMXUE");
     expect(extractModel("گوشی موبایل سامسونگ مدل Galaxy A55 5G SM-A556E/DS")).toBe("A55");
     expect(extractModel("کابل شارژ")).toBe("");
+    expect(extractModel("کابل رابط چاپگر 1.5m U.S.B")).toBe("");
+    expect(extractModel("پاور بانک ASUS 10000mAh")).toBe("");
   });
   it("search term falls back to the name", () => {
     expect(defaultSearchTerm("  موس   LOGITECH M-90 ")).toBe("موس LOGITECH M-90");

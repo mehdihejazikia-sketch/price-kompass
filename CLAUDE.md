@@ -71,3 +71,7 @@
   CONFIRMED). Matcher splits stuck-together accounting words («لنووlenovo», «شارژرنوت») and gives a
   spec-like model (lenovo20v/3.25A) credit when all its numbers are in the title. Extension 1.9.0 also
   opens product pages for uncertain matches when the list has no price.
+- Oct 21 (printer cable case): sizes (1.5m, 20v, 65W, 16GB, 10000mAh…) are never model codes
+  (`isSpecLike` in match.js, `isSize` in model.ts, migration 006 cleared stored ones); «U.S.B» → USB;
+  QUALIFIERS (printer, HDMI, VGA, LAN, SATA, Type-C, AUX… strong; USB/wireless/bluetooth weak) must
+  agree between our name and a result title. Extension 1.10.0 (no retry search with a size).

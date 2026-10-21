@@ -3,7 +3,7 @@
 // search page (or the pinned product page) in its own background tab, read the
 // price from the page, close the tab and send each result back as it arrives.
 import { SITES, LABELS, searchUrl, belongsTo } from "./sites.js";
-import { compact, pickBest } from "./match.js";
+import { compact, isSpecLike, pickBest } from "./match.js";
 
 const VERSION = chrome.runtime.getManifest().version;
 const PAGE_TIMEOUT = 35000;
@@ -64,7 +64,8 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
 export async function checkSite(site, product) {
   const term = String(product.search_term || product.model || product.name || "").trim();
   // the model code (NK8800, GDM-248CS…) for a second search; also found in the term itself
-  const model = String(product.model || (term.match(/[A-Za-z0-9]*[A-Za-z][A-Za-z0-9]*\d[A-Za-z0-9-]*|[A-Za-z0-9]*\d[A-Za-z0-9]*[A-Za-z][A-Za-z0-9-]*/) ?? [""])[0]).trim();
+  const rawModel = String(product.model || (term.match(/[A-Za-z0-9]*[A-Za-z][A-Za-z0-9]*\d[A-Za-z0-9-]*|[A-Za-z0-9]*\d[A-Za-z0-9]*[A-Za-z][A-Za-z0-9-]*/) ?? [""])[0]).trim();
+  const model = isSpecLike(rawModel) ? "" : rawModel; // «1.5m» is a length, not a model code
   const pinned = product.urls?.[site] && belongsTo(site, product.urls[site]) ? product.urls[site] : null;
   const pageUrl = pinned || (await startUrl(site, term));
   const base = { site, page_url: pageUrl, pinned: !!pinned, checked_at: new Date().toISOString() };

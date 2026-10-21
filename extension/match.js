@@ -9,8 +9,15 @@
 const DIG = "۰۱۲۳۴۵۶۷۸۹";
 const ADIG = "٠١٢٣٤٥٦٧٨٩";
 
+/** A size / spec, not a model code: 1.5m, 20v, 3.25A, 65W, 16GB, 10000mAh, 4k, 24inch… */
+export function isSpecLike(model) {
+  return /^\d+([.,]\d+)?(m|cm|mm|v|a|ah|w|g|gb|tb|mb|mah|hz|ghz|k|inch|in|mp|ms)$/i.test(String(model ?? "").replace(/[\s-]/g, ""));
+}
+
 export function norm(s) {
   return String(s ?? "")
+    // dotted acronyms: «U.S.B» → «USB»
+    .replace(/(^|[^A-Za-z])((?:[A-Za-z]\.){1,4}[A-Za-z])(?![A-Za-z])/g, (_, pre, acr) => pre + acr.replace(/\./g, ""))
     .replace(/[۰-۹]/g, (d) => String(DIG.indexOf(d)))
     .replace(/[٠-٩]/g, (d) => String(ADIG.indexOf(d)))
     .replace(/[يى]/g, "ی")
@@ -101,6 +108,25 @@ const NOT_BRAND = new Set(["usb", "type", "c", "led", "rgb", "to", "ide", "sata"
   "gb", "tb", "g", "kvm", "cat", "used", "display", "net", "sftp", "utp", "ftp", "aio", "giga", "ef", "lq", "xp", "ups", "hub", "dc", "ac", "oem", "box", "original", "orginal", "copy", "cm", "mm", "pin", "watt", "wifi", "lan", "poe", "nvme", "m2", "pcie", "fhd", "hd", "ips", "the", "and", "with", "for"]);
 // edition words that make a different product when only the result has them
 const EDITIONS = ["pro", "max", "plus", "ultra", "mini", "lite", "air", "se", "neo", "prime"];
+// words that say what KIND of product it is: they must agree («کابل … چاپگر» ≠ HDMI cable).
+// strong = a result having it while our product doesn't is a different product
+const QUALIFIERS = [
+  { words: ["چاپگر", "پرینتر", "printer"], strong: true },
+  { words: ["hdmi", "اچ دی ام آی", "اچ دی ام ای", "اچ دی ام ی"], strong: true },
+  { words: ["vga"], strong: true },
+  { words: ["dvi"], strong: true },
+  { words: ["displayport", "دیسپلی پورت", "display port"], strong: true },
+  { words: ["شبکه", "lan", "cat5", "cat5e", "cat6", "cat 6", "cat7"], strong: true },
+  { words: ["sata", "ساتا"], strong: true },
+  { words: ["lightning", "لایتنینگ", "آیفون", "iphone"], strong: true },
+  { words: ["type c", "typec", "تایپ سی", "usb c", "usbc"], strong: true },
+  { words: ["aux", "صدا", "صوتی", "audio"], strong: true },
+  { words: ["usb", "یو اس بی"], strong: false },
+  { words: ["بی سیم", "وایرلس", "wireless"], strong: false },
+  { words: ["بلوتوث", "بلوتوثی", "bluetooth"], strong: false },
+  { words: ["گیمینگ", "gaming", "مخصوص بازی"], strong: false },
+];
+
 const STOP = new Set(["مدل", "اصلی", "با", "و", "برای", "سایز", "اینچ", "عدد", "جدید", "طرح", "رنگ", "نسخه", "سری", "ظرفیت"]);
 
 function has(titleNorm, titleCompact, word) {
@@ -125,7 +151,7 @@ export function productSignals(product) {
   }
   const firstFa = words.find((w) => /[؀-ۿ]/.test(w) && !STOP.has(w));
   if (!type && firstFa && firstFa.length >= 2) type = [firstFa];
-  const model = compact(product.model);
+  const model = isSpecLike(product.model) ? "" : compact(product.model);
   const brands = [];
   const brandText = norm(product.brand);
   for (const [b, fa] of Object.entries(BRANDS)) {
@@ -143,8 +169,10 @@ export function productSignals(product) {
     }
   }
   const editions = EDITIONS.filter((e) => ` ${name} `.includes(` ${e} `));
+  const nameCompact = name.replace(/\s+/g, "");
+  const qualifiers = QUALIFIERS.filter((q) => q.words.some((w) => has(name, nameCompact, w)));
   const tokens = words.filter((w) => w.length >= 2 && !STOP.has(w));
-  return { type, model, brands, editions, tokens };
+  return { type, model, brands, editions, tokens, qualifiers };
 }
 
 /** Score a shop result against our product. ≥ 80 sure, ≥ 45 probably, else wrong product. */
@@ -169,6 +197,13 @@ export function score(candidate, product, signals = productSignals(product)) {
   if (signals.brands.length) {
     if (signals.brands.some((group) => group.some((w) => has(tn, tc, w)))) s += 20;
     else { s -= signals.brands.every((g) => g.guessed) ? 8 : 20; reasons.push("brand"); }
+  }
+  for (const q of QUALIFIERS) {
+    const inName = signals.qualifiers?.includes(q);
+    const inTitle = q.words.some((w) => has(tn, tc, w));
+    if (inName && inTitle) s += 12;
+    else if (inName && !inTitle) { s -= 12; reasons.push("kind"); }
+    else if (!inName && inTitle && q.strong) { s -= 25; reasons.push("kind"); }
   }
   const extra = EDITIONS.filter((e) => ` ${tn} `.includes(` ${e} `) && !signals.editions.includes(e));
   if (extra.length) { s -= Math.min(30, 15 * extra.length); reasons.push("edition"); }

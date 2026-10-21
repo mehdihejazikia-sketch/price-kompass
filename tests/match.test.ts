@@ -67,6 +67,20 @@ describe("matcher: type + brand + model", () => {
     }
   });
 
+  it("printer cable: a size is not a model, an HDMI cable is a different product (screenshot case)", () => {
+    const p = { name: "کابل رابط چاپگر 1.5m U.S.B", model: "1.5m" };
+    expect(productSignals(p).model).toBe("");
+    const list = [
+      { title: "کابل اچ دی ام ای مدل 1.5m-4k طول 1.5 متری", price: 650000 },
+      { title: "کابل USB پرینتر لوتوس مدل highspeed طول 1.5 متر", price: 180000 },
+    ];
+    const best = pickBest(list, p)!;
+    expect(best.title).toContain("پرینتر");
+    expect(best.match).toBe("exact");
+    expect(pickBest([list[0]], p)!.match).toBe("weak");
+    expect(pickBest([{ title: "کابل پرینتر DETEX+ طول 1.5 متر | رابط USB Printer", price: 1 }], p)!.match).toBe("exact");
+  });
+
   it("pinned product pages are trusted", () => {
     const r = evaluateResult(
       { site: "torob", status: "ok", source: "extension", title: "anything", price: 5, price_toman: 5, match: "pinned", pinned: true },
