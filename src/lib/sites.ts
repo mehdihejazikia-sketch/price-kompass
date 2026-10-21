@@ -1,4 +1,4 @@
-export const SITES = ["torob", "digikala", "emalls", "hooshmand"] as const;
+export const SITES = ["digikala", "torob", "emalls", "hooshmand"] as const;
 export type SiteId = (typeof SITES)[number];
 
 export const SITE_INFO: Record<SiteId, { label: string; home: string; host: string; color: string }> = {

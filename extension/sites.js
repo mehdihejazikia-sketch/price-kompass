@@ -1,5 +1,5 @@
 // Search URL per site (keep in sync with src/lib/sites.ts on the website).
-export const SITES = ["torob", "digikala", "emalls", "hooshmand"];
+export const SITES = ["digikala", "torob", "emalls", "hooshmand"];
 
 export const LABELS = { torob: "ترب", digikala: "دیجی‌کالا", emalls: "ایمالز", hooshmand: "هوشمند" };
 

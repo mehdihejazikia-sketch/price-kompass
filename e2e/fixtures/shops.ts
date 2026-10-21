@@ -136,7 +136,11 @@ export const emallsSkeyResults = () =>
     <div class="card"><a href="/مشخصات_Gplus-GDM-248CS~id~555"><img alt=""></a><h3><a href="/مشخصات_Gplus-GDM-248CS~id~555">مانیتور جی پلاس مدل GDM-248CS</a></h3><div class="p">قیمت: <span>استعلام</span></div></div>
   </div>`);
 
+// product page: JSON-LD without a price; the shop list shows bare numbers, the unit only in the header
 export const emallsProduct = () =>
-  page(`<h1>مانیتور جی پلاس مدل GDM-248CS</h1><div>کمترین قیمت: ۴٫۶۲۰٫۰۰۰ تومان</div><div>مقایسه قیمت در ۵ فروشگاه</div>`,
-    `<script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@type": "Product", name: "مانیتور جی پلاس مدل GDM-248CS",
-      offers: { "@type": "AggregateOffer", lowPrice: 4620000, highPrice: 4900000, offerCount: 5, priceCurrency: "IRR", availability: "https://schema.org/InStock" } })}</script>`);
+  page(`<h1>مانیتور جی پلاس مدل GDM-248CS</h1><div>مقایسه قیمت در ۵ فروشگاه</div>
+    <table class="shops"><thead><tr><th>فروشگاه</th><th>قیمت (تومان)</th></tr></thead>
+    <tbody><tr><td>فروشگاه الف</td><td class="shop-price">۴٫۸۰۰٫۰۰۰</td></tr>
+           <tr><td>فروشگاه ب</td><td class="shop-price">۴٫۶۲۰٫۰۰۰</td></tr>
+           <tr><td>فروشگاه ج</td><td class="shop-price"><del>۵٫۲۰۰٫۰۰۰</del></td></tr></tbody></table>`,
+    `<script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@type": "Product", name: "مانیتور جی پلاس مدل GDM-248CS", brand: "GPlus" })}</script>`);

@@ -154,6 +154,29 @@
     return r.json();
   }
 
+  /**
+   * Prices inside elements whose class/id says "price" (or itemprop=price), also
+   * when the unit is not next to the number (only in a column header, or nowhere).
+   * Unit: Rial if «ریال» appears around the box, else Toman. Returns [{ value, unit }].
+   */
+  function boxPrices(root = document) {
+    const out = [];
+    const els = root.querySelectorAll('[class*="price" i], [id*="price" i], [itemprop="price"], [class*="gheymat" i], [class*="ghimat" i]');
+    for (const el of els) {
+      if (el.closest("del, s, strike, .old-price, [class*='old' i], [class*='before' i], [class*='crossed' i]")) continue;
+      const own = (el.getAttribute("content") || el.innerText || "").trim();
+      if (!own || own.length > 60) continue;
+      const m = toLatin(own).match(/\d{1,3}(?:[٬,،.٫]\d{3})+|\d{5,}/);
+      if (!m) continue;
+      const v = parseNumber(m[0]);
+      if (!v || v < 10000) continue;
+      const around = (el.parentElement?.innerText || "") + " " + (el.closest("table, ul, section, div")?.querySelector("th, thead")?.innerText || "");
+      out.push({ value: v, unit: /ریال/.test(own + " " + around) && !/تومان/.test(own) ? "IRR" : "IRT" });
+      if (out.length > 200) break;
+    }
+    return out;
+  }
+
   /** A short description of the page (shown in the popup's test result). */
   function pageSnapshot() {
     const links = [...document.querySelectorAll("a[href]")]
@@ -177,7 +200,7 @@
   }
 
   globalThis.__pkParsers = globalThis.__pkParsers || {};
-  globalThis.__pk = { toLatin, parseNumber, sleep, waitFor, jsonLd, nextData, findAll, isType, productFromJsonLd, abs, visiblePrices, reconcile, blockedReason, fetchJson };
+  globalThis.__pk = { toLatin, parseNumber, sleep, waitFor, jsonLd, nextData, findAll, isType, productFromJsonLd, abs, visiblePrices, boxPrices, reconcile, blockedReason, fetchJson };
 
   /** Called by the background worker: run the site's parser, never throw. */
   globalThis.__pkRun = async (site, ctx) => {

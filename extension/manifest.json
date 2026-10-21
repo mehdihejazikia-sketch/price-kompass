@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "قیمت‌یاب – افزونه استعلام قیمت",
   "short_name": "قیمت‌یاب",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "description": "قیمت کالا را مثل یک کاربر در ترب، دیجی‌کالا، ایمالز و هوشمند می‌خواند و به سایت قیمت‌یاب برمی‌گرداند.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAroePtfA6q0De9Ew+81guf4kBKJDPRvtO05fLpkHj8MXyDpmewI0Dk6HsC3XSX2+tkeNxcGFaVFCqSCKj/fXEAspt/1BTu+il6RWQqzKX28SUd37pV20IxFnlFg1vNHi+CZ5ScNxa4sGlP0ALRHazLVVjrlI2HrBsdOrd3qjm8Tdq22r73M4Vf78BwnHAsd6lYCmVBD12dG06lhUQoryFiyEJyfv3iPLuVw3vvXdJWWjLkVhK1UgofoIRqv0+GNuLaKDUtesM3usRkxXnpgxHLJlxYLB6ry7kFGCAK6x0zj9BOvJmCdBLpXnx+3j8ZvCSkfznZuS1TmWw52CBdEY5QQIDAQAB",
   "minimum_chrome_version": "116",

@@ -66,6 +66,9 @@ test("live check for 88724 (GDM-248CS) on torob, digikala and emalls", async () 
   expect(shops.opened.some((u) => u === "https://www.hooshmandco.com/gplus-gdm-248cs")).toBe(true);
   expect(await sw.evaluate(() => chrome.storage.local.get("searchTpl:hooshmand"))).toEqual({});
 
+  // order: Digikala, Torob, eMalls, Hooshmand
+  const order = await page.locator("[data-testid^=row-]").evaluateAll((rows) => rows.map((r) => r.getAttribute("data-testid")));
+  expect(order).toEqual(["row-digikala", "row-torob", "row-emalls", "row-hooshmand"]);
   const torob = page.getByTestId("row-torob");
   await expect(torob).toContainText("GDM-248CS"); // found title, the right model (not GDM-278LN)
   await expect(torob).toContainText("کالا مطابقت دارد");

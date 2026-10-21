@@ -47,7 +47,8 @@
         box = el;
       }
       const text = box.innerText || "";
-      const price = priceIn(text, pk);
+      const fromBox = pk.boxPrices(box).map((p) => (p.unit === "IRR" ? Math.round(p.value / 10) : p.value));
+      const price = priceIn(text, pk) ?? (fromBox.length ? Math.min(...fromBox) : null);
       const shops = /(\d+)\s*(فروشگاه|فروشنده)/.exec(pk.toLatin(text));
       out.push({
         title: item.title,
@@ -74,13 +75,38 @@
     return { title: String(title ?? "").trim(), price: price || null, currency: "IRT", url: link ? pk.abs(link) : null, in_stock: !!price, seller_count: shops || null, seller: null };
   }
 
+  /** Lowest price on an eMalls product page; the page lists one price per shop. */
+  function pagePrice(pk) {
+    const toToman = (p) => (p.unit === "IRR" ? Math.round(p.value / 10) : p.value);
+    // «کمترین قیمت: ۲٬۴۵۰٬۰۰۰» / «قیمت از ۲٬۴۵۰٬۰۰۰»
+    const text = pk.toLatin(document.body?.innerText ?? "");
+    const lead = /(کمترین قیمت|قیمت از|شروع قیمت|ارزان ?ترین)\s*:?\s*(\d{1,3}(?:[٬,،.٫]\d{3})+|\d{5,})\s*(تومان|ریال)?/.exec(text);
+    if (lead) {
+      const v = pk.parseNumber(lead[2]);
+      if (v) return lead[3] === "ریال" ? Math.round(v / 10) : v;
+    }
+    const shown = pk.visiblePrices().map(toToman);
+    const boxes = pk.boxPrices().map(toToman);
+    const all = [...shown, ...boxes].filter((v) => v >= 1000);
+    return all.length ? Math.min(...all) : null;
+  }
+
   async function productPage(ctx, pk) {
-    const ld = await pk.waitFor(() => pk.productFromJsonLd(), 8000);
-    if (ld?.title) return { kind: "product", candidates: [{ ...ld, currency: pk.reconcile(ld.price, ld.currency || "IRT"), url: location.href.split("?")[0] }] };
-    const h1 = document.querySelector("h1")?.innerText?.trim();
-    const shown = pk.visiblePrices().filter((p) => p.unit === "IRT").map((p) => p.value);
-    if (h1) return { kind: "product", candidates: [{ title: h1, price: shown.length ? Math.min(...shown) : null, currency: "IRT", url: location.href.split("?")[0], in_stock: shown.length > 0, seller: null, seller_count: null }] };
-    return { kind: "product", candidates: [] };
+    // the page may fill in prices a moment after loading
+    await pk.waitFor(() => pk.productFromJsonLd()?.price || pk.visiblePrices().length || pk.boxPrices().length, 8000);
+    const url = location.href.split("?")[0];
+    const ld = pk.productFromJsonLd();
+    if (ld?.title && ld.price) return { kind: "product", candidates: [{ ...ld, currency: pk.reconcile(ld.price, ld.currency || "IRT"), url }] };
+    // JSON-LD without a price (or none): read the prices shown on the page
+    const title = (document.querySelector("h1")?.innerText || ld?.title || "").trim();
+    const price = pagePrice(pk);
+    const text = document.body?.innerText ?? "";
+    const shops = /(\d+)\s*(فروشگاه|فروشنده)/.exec(pk.toLatin(text));
+    if (!title) return { kind: "product", candidates: [] };
+    return {
+      kind: "product",
+      candidates: [{ title, price, currency: "IRT", url, in_stock: !!price && !/^\s*ناموجود/.test(text), seller: null, seller_count: ld?.seller_count ?? (shops ? Number(shops[1]) : null) }],
+    };
   }
 
   const squash = (v) => String(v ?? "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");

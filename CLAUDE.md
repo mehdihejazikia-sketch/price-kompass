@@ -75,3 +75,7 @@
   (`isSpecLike` in match.js, `isSize` in model.ts, migration 006 cleared stored ones); «U.S.B» → USB;
   QUALIFIERS (printer, HDMI, VGA, LAN, SATA, Type-C, AUX… strong; USB/wireless/bluetooth weak) must
   agree between our name and a result title. Extension 1.10.0 (no retry search with a size).
+- Oct 21: site order everywhere is Digikala, Torob, eMalls, Hooshmand (`SITES`). Extension 1.11.0:
+  eMalls product page no longer stops at JSON-LD without a price; it reads «کمترین قیمت/قیمت از …»,
+  prices with a unit, and `pk.boxPrices()` (numbers inside price-class elements, unit only in a header,
+  struck prices skipped). Result cards use boxPrices too.
