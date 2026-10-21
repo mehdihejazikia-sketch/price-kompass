@@ -10,16 +10,18 @@ import { captcha, digikalaSearchApi, digikalaShell, emalls404, emallsHome, emall
 
 export const SHOP_HOSTS = ["torob.com", "api.torob.com", "www.digikala.com", "api.digikala.com", "emalls.ir", "www.hooshmandco.com"];
 
-export type ShopServer = { close(): Promise<void>; opened: string[]; state: { emallsBlocked: boolean } };
+export type ShopServer = { close(): Promise<void>; opened: string[]; firstHit: Record<string, number>; state: { emallsBlocked: boolean } };
 
 export async function startShopServer(port = 443): Promise<ShopServer> {
   const dir = mkdtempSync(path.join(os.tmpdir(), "pk-cert-"));
   execSync(`openssl req -x509 -newkey rsa:2048 -nodes -keyout ${dir}/k.pem -out ${dir}/c.pem -days 1 -subj /CN=shops.test`, { stdio: "ignore" });
   const opened: string[] = [];
+  const firstHit: Record<string, number> = {};
   const state = { emallsBlocked: false };
   const server = https.createServer({ key: readFileSync(`${dir}/k.pem`), cert: readFileSync(`${dir}/c.pem`) }, (req, res) => {
     const host = (req.headers.host ?? "").split(":")[0];
     const url = new URL(req.url ?? "/", `https://${host}`);
+    firstHit[host] ??= Date.now();
     const send = (body: string, type = "text/html; charset=utf-8", extra: Record<string, string> = {}) => {
       res.writeHead(200, { "Content-Type": type, ...extra });
       res.end(body);
@@ -49,7 +51,7 @@ export async function startShopServer(port = 443): Promise<ShopServer> {
     res.end();
   });
   await new Promise<void>((resolve, reject) => server.once("error", reject).listen(port, "127.0.0.1", resolve));
-  return { opened, state, close: () => new Promise((r) => server.close(() => r())) };
+  return { opened, firstHit, state, close: () => new Promise((r) => server.close(() => r())) };
 }
 
 export function chromiumArgs() {

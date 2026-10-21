@@ -78,7 +78,10 @@ test("live check for 88724 (GDM-248CS) on torob, digikala and emalls", async () 
   await page.evaluate(() => document.documentElement.classList.add("dark"));
   await page.screenshot({ path: "test-results/screens/product-dark.png", fullPage: true });
   await page.evaluate(() => document.documentElement.classList.remove("dark"));
-  // one site at a time, search pages only, every tab closed again
+  // all four sites were opened at the same time (not one after another)
+  const starts = ["torob.com", "www.digikala.com", "emalls.ir", "www.hooshmandco.com"].map((h) => shops.firstHit[h]);
+  expect(Math.max(...starts) - Math.min(...starts)).toBeLessThan(3000);
+  // every tab closed again
   await expect.poll(() => ctx.pages().filter((p) => /torob|digikala|emalls/.test(p.url())).length).toBe(0);
 
   // confirm Torob's product → pinned; the next check opens that product page directly

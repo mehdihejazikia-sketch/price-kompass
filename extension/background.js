@@ -1,7 +1,7 @@
 // قیمت‌یاب browser extension: reads prices the way a person would.
-// The website sends one product; for each site, one at a time, we open the
-// site's search page (or the pinned product page) in a background tab, read
-// the price from the page, close the tab and send the result back.
+// The website sends one product; for every site at once we open the site's
+// search page (or the pinned product page) in its own background tab, read the
+// price from the page, close the tab and send each result back as it arrives.
 import { SITES, LABELS, searchUrl, belongsTo } from "./sites.js";
 import { compact, pickBest } from "./match.js";
 
@@ -31,13 +31,17 @@ chrome.runtime.onConnectExternal.addListener((port) => {
     if (msg?.type !== "check") return;
     serial(async () => {
       const sites = (msg.sites ?? SITES).filter((s) => SITES.includes(s));
-      for (const site of sites) {
-        if (cancelled) return;
-        safePost(port, { type: "progress", site, state: "checking" });
-        const result = await checkSite(site, msg.product ?? {});
-        if (cancelled) return;
-        safePost(port, { type: "result", result });
-      }
+      // all sites at the same time, each in its own background tab; every result is
+      // sent as soon as that site is done. (One product at a time: the queue above.)
+      await Promise.all(
+        sites.map(async (site, i) => {
+          await new Promise((r) => setTimeout(r, i * 250)); // open the tabs a moment apart
+          if (cancelled) return;
+          safePost(port, { type: "progress", site, state: "checking" });
+          const result = await checkSite(site, msg.product ?? {});
+          if (!cancelled) safePost(port, { type: "result", result });
+        }),
+      );
       safePost(port, { type: "done" });
     });
   });

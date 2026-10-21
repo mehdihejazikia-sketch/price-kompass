@@ -60,3 +60,5 @@
   marker; entries without an address are opened by clicking (`__pkClickItem`). Product price: the box
   around «افزودن به سبد», then near the <h1>. Learned search addresses only after real results.
   Debug snapshot now has `steps` and `requests` (the page's fetch/XHR URLs, e.g. its search API).
+- Extension 1.7.0: all sites of one product are checked at the same time (one background tab per
+  site, opened 250 ms apart, results sent as each finishes); products are still checked one at a time.
